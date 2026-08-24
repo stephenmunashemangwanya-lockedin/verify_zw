@@ -1,0 +1,101 @@
+name: Security
+
+on:
+  pull_request:
+  push:
+    branches: [main, development]
+  schedule:
+    - cron: "17 3 * * 3"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: read
+
+concurrency:
+  group: security-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  NODE_VERSION: 24.7.0
+
+jobs:
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with: { persist-credentials: false }
+      - uses: actions/dependency-review-action@v5.0.0
+        with:
+          fail-on-severity: high
+
+  dependency-and-secret-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@v6.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
+      - run: npm ci
+      - run: npm --prefix frontend ci
+      - name: Enforce dependency security policy
+        run: npm run security:dependencies
+      - run: npm run docs:validate
+      - run: npm run frontend:build
+      - run: npm run ci:security
+      - name: Repository critical vulnerability scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: Repository secret scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: secret
+          exit-code: "1"
+      - name: Workflow and configuration scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: config
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+      - name: Dockerfile lint
+        run: >-
+          docker run --rm -i hadolint/hadolint:v2.14.0-debian
+          hadolint --failure-threshold error -
+          < Dockerfile
+          && docker run --rm -i hadolint/hadolint:v2.14.0-debian hadolint --failure-threshold error - < frontend/Dockerfile
+          && docker run --rm -i hadolint/hadolint:v2.14.0-debian hadolint --failure-threshold error - < docker/blockchain.Dockerfile
+          && docker run --rm -i hadolint/hadolint:v2.14.0-debian hadolint --failure-threshold error - < docker/backup.Dockerfile
+      - name: Workflow lint
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.10
+      - run: npm run ci:validate
+
+  codeql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with: { persist-credentials: false }
+      - uses: github/codeql-action/init@v4.36.0
+        with:
+          languages: javascript-typescript
+          queries: security-extended
+      - uses: github/codeql-action/analyze@v4.36.0
+        with:
+          category: /language:javascript-typescript

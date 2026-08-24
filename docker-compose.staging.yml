@@ -1,0 +1,43 @@
+name: zsvp-staging
+services:
+  migration:
+    image: ${BACKEND_IMAGE:?Set immutable BACKEND_IMAGE digest}
+    command: ["node", "backend/database/runMigrations.js"]
+    env_file: ["${STAGING_ENV_FILE:-.env.staging}"]
+    restart: "no"
+    networks: [application]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs: [/tmp]
+  backend:
+    image: ${BACKEND_IMAGE:?Set immutable BACKEND_IMAGE digest}
+    env_file: ["${STAGING_ENV_FILE:-.env.staging}"]
+    depends_on: { migration: { condition: service_completed_successfully } }
+    expose: ["3000"]
+    restart: unless-stopped
+    networks: [application]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs: [/tmp, /app/output/pdf, /app/generated/qr, /app/logs, /app/backend/uploads/certificates-temp]
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "5" } }
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health/ready',{signal:AbortSignal.timeout(2000)}).then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+  frontend:
+    image: ${FRONTEND_IMAGE:?Set immutable FRONTEND_IMAGE digest}
+    depends_on: { backend: { condition: service_healthy } }
+    expose: ["8080"]
+    restart: unless-stopped
+    networks: [application]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs: [/tmp, /var/cache/nginx, /var/run]
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "5" } }
+networks:
+  application: {}

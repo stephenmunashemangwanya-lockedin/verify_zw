@@ -1,0 +1,10 @@
+const { z, email, trimmed } = require("./commonValidator");
+const { validatePassword } = require("../utils/passwordPolicy");
+const strongPassword = z.string().refine((value) => value === value.trim() && validatePassword(value).length === 0, "Password does not meet security requirements.");
+const register = z.object({ fullName: trimmed("Full name", 150, 2), email, password: strongPassword, role: z.literal("verifier").optional() }).strict();
+const login = z.object({ email, password: z.string().min(1, "Password is required.") }).strict();
+const changePassword = z.object({ currentPassword: z.string().min(1), newPassword: strongPassword, confirmPassword: z.string().min(1) }).strict().refine((data) => data.newPassword === data.confirmPassword, { path: ["confirmPassword"], message: "Password confirmation does not match." });
+const profileUpdate = z.object({ fullName: trimmed("Full name", 150, 2).optional(), email: email.optional() }).strict().refine((data) => Object.keys(data).length > 0, "At least one profile field is required.");
+const forgotPassword=z.object({email}).strict();
+const resetPassword=z.object({token:z.string().min(43).max(512),password:strongPassword,confirmPassword:z.string().min(1).max(512)}).strict().refine(data=>data.password===data.confirmPassword,{path:["confirmPassword"],message:"Password confirmation does not match."});
+module.exports = { register, login, changePassword, profileUpdate, strongPassword, forgotPassword, resetPassword };

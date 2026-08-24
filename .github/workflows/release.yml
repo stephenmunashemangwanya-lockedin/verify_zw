@@ -1,0 +1,138 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Semantic version including the v prefix
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: 24.7.0
+  RELEASE_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
+  CI: true
+  NODE_ENV: test
+  DB_NAME: protected_release_placeholder
+  TEST_DB_NAME: skill_verification_release_test
+  TEST_DB_HOST: 127.0.0.1
+  TEST_DB_PORT: 5432
+  TEST_DB_USER: release_runner
+  TEST_DB_PASSWORD: release-fake-postgres-password
+  TEST_DB_ADMIN_NAME: postgres
+  CREATE_TEST_DB: "true"
+  JWT_SECRET: release-placeholder-jwt-secret-at-least-24-characters
+  BLOCKCHAIN_NETWORK: localhost
+  BLOCKCHAIN_CHAIN_ID: 31337
+  BLOCKCHAIN_ENABLED: "true"
+  IPFS_ENABLED: "false"
+
+jobs:
+  full-release-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    services:
+      postgres:
+        image: postgres:18.0-bookworm
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: release_runner
+          POSTGRES_PASSWORD: release-fake-postgres-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U release_runner -d postgres"
+          --health-interval 5s --health-timeout 3s --health-retries 12
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v6.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
+      - name: Validate semantic release version and tag immutability
+        run: |
+          [[ "$RELEASE_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid semantic version" >&2; exit 1; }
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]] && git rev-parse "$RELEASE_VERSION" >/dev/null 2>&1; then
+            echo "Release tag already exists and is immutable" >&2
+            exit 1
+          fi
+      - run: npm ci
+      - run: npm --prefix frontend ci
+      - run: npm run ci:release-check
+      - run: npm run test:backend:coverage
+      - run: npm run test:frontend:coverage
+      - run: npm run test:contract:coverage
+      - run: npm run test:e2e:api
+      - run: npx --prefix frontend playwright install --with-deps chromium
+      - run: npm run test:e2e:frontend
+      - run: npm run test:accessibility
+      - run: npm run export:contract-abi
+      - name: Generate npm SPDX SBOMs
+        run: |
+          mkdir -p sbom
+          npm sbom --sbom-format spdx > sbom/npm-root.spdx.json
+          npm --prefix frontend sbom --sbom-format spdx > sbom/npm-frontend.spdx.json
+      - run: node scripts/scanCiArtifacts.js coverage frontend/coverage frontend/dist sbom
+      - name: Create changelog summary
+        run: |
+          previous="$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)"
+          if [[ -n "$previous" ]]; then git log --pretty='- %s (%h)' "$previous"..HEAD > release-changelog.md; else git log -n 50 --pretty='- %s (%h)' > release-changelog.md; fi
+          printf "\nCommit: \`%s\`\n" "$GITHUB_SHA" >> release-changelog.md
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: release-gate-${{ env.RELEASE_VERSION }}-${{ github.sha }}
+          path: |
+            frontend/dist
+            backend/blockchain/CredentialRegistry.abi.json
+            docs/openapi.yaml
+            coverage
+            frontend/coverage
+            sbom
+            release-changelog.md
+          if-no-files-found: error
+          retention-days: 14
+
+  verify-images-and-release:
+    needs: full-release-gate
+    if: github.event_name == 'push' && github.event.repository.fork == false
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: docker/login-action@v4.0.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Verify immutable images published by Docker workflow
+        run: |
+          for component in backend frontend blockchain backup; do
+            image="ghcr.io/${GITHUB_REPOSITORY}-${component}:${RELEASE_VERSION}"
+            for attempt in {1..30}; do docker manifest inspect "$image" >/dev/null 2>&1 && break; echo "Waiting for image publication attempt $attempt"; sleep 10; done
+            docker manifest inspect "$image" >/dev/null
+          done
+      - name: Create GitHub release without deployment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >-
+          gh release create "$RELEASE_VERSION" --verify-tag --generate-notes
+          --title "$RELEASE_VERSION"
+          --notes "Commit: $GITHUB_SHA. Deployment is not automatic; use the protected Stage 27 preparation workflow."

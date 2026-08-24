@@ -1,0 +1,134 @@
+name: Primary CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, development]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  NODE_VERSION: 24.7.0
+  CI: true
+  NODE_ENV: test
+  TEST_DB_NAME: skill_verification_ci_test
+  DB_NAME: skill_verification_ci_test
+  JWT_SECRET: ci-placeholder-jwt-secret-at-least-24-characters
+  BLOCKCHAIN_NETWORK: localhost
+  BLOCKCHAIN_CHAIN_ID: 31337
+  BLOCKCHAIN_ENABLED: "false"
+  IPFS_ENABLED: "false"
+
+jobs:
+  validate-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
+      - run: npm ci
+      - run: npm --prefix frontend ci
+      - run: npm run ci:validate
+      - run: npm run frontend:lint
+      - run: npm run test:backend
+      - run: npm run test:frontend
+      - run: npm run test:contract
+      - run: npm run test:migration
+      - run: npm run test:recovery
+      - run: npm run test:docker
+      - run: npm run test:release
+      - run: npm run frontend:build
+      - run: npm run ci:security
+      - name: Upload safe build and API artifacts
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: ci-safe-artifacts-${{ github.sha }}
+          path: |
+            frontend/dist
+            docs/openapi.yaml
+            backend/blockchain/CredentialRegistry.abi.json
+          if-no-files-found: error
+          retention-days: 7
+
+  backend-coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@v6.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npm run test:backend:coverage
+      - run: node scripts/scanCiArtifacts.js coverage
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: backend-coverage-${{ github.sha }}
+          path: coverage
+          if-no-files-found: error
+          retention-days: 7
+
+  frontend-coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@v6.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm --prefix frontend ci
+      - run: npm run test:frontend:coverage
+      - run: node scripts/scanCiArtifacts.js frontend/coverage
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: frontend-coverage-${{ github.sha }}
+          path: frontend/coverage
+          if-no-files-found: error
+          retention-days: 7
+
+  contract-coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      BLOCKCHAIN_RPC_URL: ""
+      DEPLOYER_PRIVATE_KEY: ""
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@v6.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npm run test:contract
+      - run: npm run test:contract:coverage
+      - run: node scripts/scanCiArtifacts.js coverage.json
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: contract-coverage-${{ github.sha }}
+          path: |
+            coverage.json
+            coverage/index.html
+          if-no-files-found: warn
+          retention-days: 7

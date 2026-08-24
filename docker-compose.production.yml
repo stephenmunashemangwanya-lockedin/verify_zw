@@ -1,0 +1,27 @@
+services:
+  backend:
+    environment:
+      NODE_ENV: production
+      ENABLE_METRICS: "false"
+      ENABLE_SWAGGER: "false"
+      BLOCKCHAIN_ENABLED: ${BLOCKCHAIN_ENABLED:-true}
+      BLOCKCHAIN_NETWORK: ${BLOCKCHAIN_NETWORK:?Set production network}
+      BLOCKCHAIN_RPC_URL: ${BLOCKCHAIN_RPC_URL:?Set external RPC URL}
+      BLOCKCHAIN_CHAIN_ID: ${BLOCKCHAIN_CHAIN_ID:?Set chain ID}
+      CONTRACT_ADDRESS: ${CONTRACT_ADDRESS:?Set contract address}
+      DEPLOYER_PRIVATE_KEY: ${DEPLOYER_PRIVATE_KEY:?Supply externally}
+    read_only: true
+    tmpfs: [/tmp]
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 768M }
+  frontend:
+    read_only: true
+    tmpfs: [/tmp, /var/cache/nginx, /var/run]
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 128M }
+  postgres:
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 1G }

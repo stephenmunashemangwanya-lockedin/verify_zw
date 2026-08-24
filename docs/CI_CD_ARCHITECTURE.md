@@ -1,0 +1,14 @@
+# CI/CD architecture
+
+Stage 27 separates fast CI, isolated E2E, security analysis, Docker validation/publishing, release coordination, and deployment preparation into six workflows. Pull requests run CI, E2E, security, and non-publishing Docker builds. Pushes to `main` and `development` run CI/E2E/security; Docker publishing is limited to trusted `main` and semantic-version tag events. Releases never deploy.
+
+The logical gate is `CI + E2E + Security + Docker -> Release -> manually approved deployment preparation`. GitHub does not provide cross-workflow `needs`, so branch protection must require the named workflow checks. The release workflow repeats the release-critical test/coverage/E2E gates and verifies that the Docker workflow published all four immutable version images before creating a GitHub release.
+
+All Node jobs use the supported Node 24 line with lockfile-backed npm caches; production images pin 24.19.0. PostgreSQL jobs use `postgres:18.0-bookworm`. API E2E creates only `skill_verification_ci_test` or `skill_verification_release_test`, starts local Hardhat chain 31337, deploys an ephemeral contract, mocks IPFS in-process, and cleans only test tables. Browser jobs use a separate `_test` database and fake credentials.
+
+Artifacts are retained for 3â€“14 days. Allowed outputs are coverage, Playwright failures, OpenAPI, frontend build, ABI, SBOM, changelog, and dry-run preparation reports. Environments, backups, restore data, private keys, tokens, database passwords, and credential uploads are forbidden.
+
+Known limitations: GitHub environment reviewers and branch rules must be configured in repository settings; CodeQL does not analyze Solidity; automated axe tests do not replace manual WCAG review; image CVE results depend on the current scanner database; and Stage 27 has no real deployment target. The current audit has no critical findings, and the frontend and production trees are clean. Thirty-seven root development-toolchain advisories remain visible. The dependency gate blocks critical/high production, critical tooling, and critical/high frontend findings, while Dependency Review blocks newly introduced high-severity dependencies. The Hardhat 3 migration requires a separately reviewed compatibility change.
+# Dependency security gate
+
+The security workflow installs both lockfiles with `npm ci` and runs `npm run security:dependencies`. The gate audits complete and production-only root/frontend trees. It blocks critical/high production findings, critical/high frontend findings, and critical root tooling findings. Root high development-only findings require review and are reported explicitly; pull-request Dependency Review rejects newly introduced high-severity dependencies. The current classification and temporary Hardhat-toolchain acceptance are maintained in [DEPENDENCY_SECURITY_REPORT.md](DEPENDENCY_SECURITY_REPORT.md).

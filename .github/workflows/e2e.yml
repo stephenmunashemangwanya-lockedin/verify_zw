@@ -1,0 +1,124 @@
+name: Isolated E2E
+
+on:
+  pull_request:
+  push:
+    branches: [main, development]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  NODE_VERSION: 24.7.0
+  CI: true
+  NODE_ENV: test
+  DB_NAME: protected_ci_placeholder
+  TEST_DB_NAME: skill_verification_ci_test
+  TEST_DB_HOST: 127.0.0.1
+  TEST_DB_PORT: 5432
+  TEST_DB_USER: ci_runner
+  TEST_DB_PASSWORD: ci-fake-postgres-password
+  TEST_DB_ADMIN_NAME: postgres
+  CREATE_TEST_DB: "true"
+  JWT_SECRET: ci-placeholder-jwt-secret-at-least-24-characters
+  BLOCKCHAIN_NETWORK: localhost
+  BLOCKCHAIN_CHAIN_ID: 31337
+  BLOCKCHAIN_ENABLED: "true"
+  IPFS_ENABLED: "false"
+
+jobs:
+  api-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18.0-bookworm
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: ci_runner
+          POSTGRES_PASSWORD: ci-fake-postgres-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ci_runner -d postgres"
+          --health-interval 5s --health-timeout 3s --health-retries 12
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@v6.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - name: Run migrations, isolated Hardhat deployment, mocked-IPFS API E2E, and cleanup checks
+        run: npm run test:e2e:api
+      - name: Upload failure logs only
+        if: failure()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: api-e2e-failure-${{ github.sha }}
+          path: test-results
+          if-no-files-found: ignore
+          retention-days: 3
+
+  frontend-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:18.0-bookworm
+        env:
+          POSTGRES_DB: skill_verification_ui_test
+          POSTGRES_USER: ci_runner
+          POSTGRES_PASSWORD: ci-fake-postgres-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ci_runner -d skill_verification_ui_test"
+          --health-interval 5s --health-timeout 3s --health-retries 12
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_NAME: skill_verification_ui_test
+      DB_USER: ci_runner
+      DB_PASSWORD: ci-fake-postgres-password
+      BLOCKCHAIN_ENABLED: "false"
+      IPFS_ENABLED: "false"
+      VITE_API_BASE_URL: http://127.0.0.1:3000/api
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@v6.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
+      - run: npm ci
+      - run: npm --prefix frontend ci
+      - run: npx --prefix frontend playwright install --with-deps chromium
+      - run: npm run migrate
+      - name: Start isolated test backend
+        run: mkdir -p test-results && nohup npm start > test-results/backend.log 2>&1 &
+      - run: npm run frontend:build
+      - run: npm run test:e2e:frontend
+      - run: npm run test:accessibility
+      - name: Scan failure artifacts before upload
+        if: failure()
+        run: node scripts/scanCiArtifacts.js test-results frontend/playwright-report frontend/test-results
+      - name: Upload Playwright failures only
+        if: failure()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: playwright-failure-${{ github.sha }}
+          path: |
+            test-results
+            frontend/playwright-report
+            frontend/test-results
+          if-no-files-found: ignore
+          retention-days: 3

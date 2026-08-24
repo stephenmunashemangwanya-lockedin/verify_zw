@@ -1,0 +1,13 @@
+const { z, isoDate, credentialStatus } = require("./commonValidator");
+const PERIODS = ["7days", "30days", "3months", "6months", "12months"];
+const GROUPS = ["day", "week", "month"];
+const METHODS = ["file", "hash", "credential_id", "public_token", "qr"];
+const dateRange = (schema) => schema.refine((data) => !data.dateFrom || !data.dateTo || data.dateFrom <= data.dateTo, { path: ["dateTo"], message: "dateTo must not be before dateFrom." }).refine((data) => { if (!data.dateFrom || !data.dateTo) return true; const from = new Date(`${data.dateFrom}T00:00:00Z`); const to = new Date(`${data.dateTo}T00:00:00Z`); return to - from <= 731 * 86400000; }, { path: ["dateTo"], message: "Analytics range cannot exceed 24 months." });
+const summary = z.object({}).strict();
+const recentActivity = z.object({ limit: z.coerce.number().int().min(1).max(50).default(10), action: z.string().trim().max(100).optional(), entityType: z.string().trim().max(100).optional() }).strict();
+const trend = dateRange(z.object({ period: z.enum(PERIODS).default("30days"), dateFrom: isoDate.optional(), dateTo: isoDate.optional(), groupBy: z.enum(GROUPS).default("day") }).strict());
+const verificationTrend = trend.extend({ method: z.enum(METHODS).optional() }).strict();
+const topInstitutions = dateRange(z.object({ limit: z.coerce.number().int().min(1).max(50).default(10), dateFrom: isoDate.optional(), dateTo: isoDate.optional(), sortBy: z.enum(["totalCredentials", "activeCredentials", "totalVerifications", "totalStudents"]).default("totalCredentials") }).strict());
+const mostVerified = dateRange(z.object({ limit: z.coerce.number().int().min(1).max(50).default(10), dateFrom: isoDate.optional(), dateTo: isoDate.optional(), status: credentialStatus.optional() }).strict());
+const failures = dateRange(z.object({ page: z.coerce.number().int().min(1).default(1), limit: z.coerce.number().int().min(1).max(100).default(20), dateFrom: isoDate.optional(), dateTo: isoDate.optional(), category: z.enum(["ipfs", "blockchain", "certificate_processing", "pdf_generation", "reconciliation", "verification_inconsistency", "account_lockout"]).optional() }).strict());
+module.exports = { summary, recentActivity, trend, verificationTrend, topInstitutions, mostVerified, failures, PERIODS, GROUPS, METHODS };

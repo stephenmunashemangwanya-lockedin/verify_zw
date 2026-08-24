@@ -1,0 +1,12 @@
+const express = require("express");
+const controller = require("../controllers/healthController");
+const { authenticate, requireCurrentUser, authorizeRoles } = require("../middleware/authMiddleware");
+const router = express.Router();
+router.get("/", controller.publicHealth);
+router.get("/live", controller.liveHealth);
+router.get("/ready", controller.readyHealth);
+router.use(authenticate, requireCurrentUser, authorizeRoles("super_admin"));
+router.get("/database", controller.databaseHealth);
+router.get("/ipfs", controller.ipfsHealth);
+router.get("/blockchain", controller.blockchainHealth);
+module.exports = router;

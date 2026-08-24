@@ -1,0 +1,12 @@
+const express = require("express");
+const { authenticate, requireCurrentUser, authorizeRoles } = require("../middleware/authMiddleware");
+const { list, getOne } = require("../controllers/auditController");
+const router = express.Router();
+const { validate } = require("../middleware/validationMiddleware");
+const schemas = require("../validators/auditValidator");
+const { sensitiveNoStore } = require("../middleware/securityMiddleware");
+router.use(authenticate, requireCurrentUser, authorizeRoles("super_admin", "institution_admin"));
+router.use(sensitiveNoStore);
+router.get("/", validate({ query: schemas.listQuery }), list);
+router.get("/:id", validate({ params: schemas.idParams }), getOne);
+module.exports = router;

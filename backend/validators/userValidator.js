@@ -1,0 +1,12 @@
+const { z, uuid, email, trimmed, role, boolean } = require("./commonValidator");
+const { pagination } = require("./paginationValidator");
+const idParams = z.object({ id: uuid }).strict();
+const listQuery = pagination(["created_at", "updated_at", "full_name", "email", "role", "is_active"]).extend({ role: role.optional(), status: z.enum(["active", "inactive", "true", "false"]).optional(), institutionId: uuid.optional() }).strict();
+const create = z.object({ fullName: trimmed("Full name", 150, 2), email, role, institutionId: uuid.nullable().optional(), isActive: boolean.optional() }).strict();
+const update = z.object({ fullName: trimmed("Full name", 150, 2).optional(), email: email.optional() }).strict().refine((data) => Object.keys(data).length > 0, "At least one field is required.");
+const status = z.object({ isActive: boolean }).strict();
+const roleChange = z.object({ role, institutionId: uuid.optional() }).strict();
+const institution = z.object({ institutionId: uuid }).strict();
+const reset = z.object({}).strict();
+const action = z.object({}).strict();
+module.exports = { idParams, listQuery, create, update, status, roleChange, institution, reset, action };

@@ -1,0 +1,49 @@
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const express = require("express");
+const { requestIdMiddleware, corsMiddleware, buildLimiter } = require("../backend/middleware/securityMiddleware");
+const { errorMiddleware } = require("../backend/middleware/errorMiddleware");
+const { validateEnvironment } = require("../backend/config/environment");
+const { fileFilter } = require("../backend/middleware/uploadMiddleware");
+const { sanitise } = require("../backend/utils/logger");
+
+const serve = async (app, action) => { const server = app.listen(0, "127.0.0.1"); await new Promise((r) => server.once("listening", r)); try { return await action(`http://127.0.0.1:${server.address().port}`); } finally { await new Promise((r) => server.close(r)); } };
+const appWithSecurity = () => { const app = express(); app.use(requestIdMiddleware, corsMiddleware(), express.json({ limit: "100b" })); app.get("/ok", (_q, r) => r.json({ ok: true })); app.post("/body", (_q, r) => r.json({ ok: true })); app.use(errorMiddleware); return app; };
+
+test("allowed development CORS origin succeeds", async () => serve(appWithSecurity(), async (url) => { const r = await fetch(`${url}/ok`, { headers: { Origin: "http://localhost:5173" } }); assert.equal(r.status, 200); assert.equal(r.headers.get("access-control-allow-origin"), "http://localhost:5173"); }));
+test("unknown production CORS origin is controlled", async () => { const old = process.env.NODE_ENV; process.env.NODE_ENV = "production"; try { await serve(appWithSecurity(), async (url) => { const r = await fetch(`${url}/ok`, { headers: { Origin: "https://evil.example" } }); assert.equal(r.status, 403); assert.equal((await r.json()).code, "CORS_ORIGIN_REJECTED"); }); } finally { process.env.NODE_ENV = old; } });
+test("server-to-server request without Origin succeeds", async () => serve(appWithSecurity(), async (url) => assert.equal((await fetch(`${url}/ok`)).status, 200)));
+test("wildcard with credentials is rejected by environment validation", () => { const old = { o: process.env.CORS_ALLOWED_ORIGINS, c: process.env.CORS_ALLOW_CREDENTIALS }; process.env.CORS_ALLOWED_ORIGINS = "*"; process.env.CORS_ALLOW_CREDENTIALS = "true"; try { assert.throws(() => validateEnvironment(), /CORS_ALLOWED_ORIGINS is unsafe/); } finally { process.env.CORS_ALLOWED_ORIGINS = old.o; process.env.CORS_ALLOW_CREDENTIALS = old.c; } });
+test("request ID is generated and returned", async () => serve(appWithSecurity(), async (url) => assert.match((await fetch(`${url}/ok`)).headers.get("x-request-id"), /^[0-9a-f-]{36}$/)));
+test("valid incoming request ID is preserved", async () => serve(appWithSecurity(), async (url) => assert.equal((await fetch(`${url}/ok`, { headers: { "x-request-id": "safe-request-1" } })).headers.get("x-request-id"), "safe-request-1")));
+test("invalid incoming request ID is replaced", async () => serve(appWithSecurity(), async (url) => assert.notEqual((await fetch(`${url}/ok`, { headers: { "x-request-id": "bad value\t" } })).headers.get("x-request-id"), "bad value\t")));
+test("oversized JSON returns 413 with request ID", async () => serve(appWithSecurity(), async (url) => { const r = await fetch(`${url}/body`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ value: "x".repeat(200) }) }); const body = await r.json(); assert.equal(r.status, 413); assert.equal(body.code, "PAYLOAD_TOO_LARGE"); assert.ok(body.requestId); }));
+test("rate limiter returns deterministic controlled response", async () => { process.env.SECURITY_TEST_LIMIT = "1"; const app = express(); app.use(requestIdMiddleware, buildLimiter("SECURITY_TEST_WINDOW", "SECURITY_TEST_LIMIT", 1)); app.get("/", (_q, r) => r.json({ ok: true })); await serve(app, async (url) => { assert.equal((await fetch(url)).status, 200); const limited = await fetch(url); assert.equal(limited.status, 429); assert.deepEqual(Object.keys(await limited.json()).sort(), ["code", "message", "requestId", "success"]); }); delete process.env.SECURITY_TEST_LIMIT; });
+
+const filtered = (name, mimetype = "application/pdf") => new Promise((resolve) => fileFilter({}, { originalname: name, mimetype }, (error, accepted) => resolve({ error, accepted })));
+test("path traversal filename is rejected", async () => assert.ok((await filtered("../certificate.pdf")).error));
+test("double extension is rejected", async () => assert.ok((await filtered("certificate.exe.pdf")).error));
+test("invalid MIME is rejected", async () => assert.ok((await filtered("certificate.pdf", "text/plain")).error));
+test("ordinary PDF filename is accepted", async () => assert.equal((await filtered("certificate.pdf")).accepted, true));
+test("nested logger metadata redacts secrets", () => { const out = sanitise({ password: "p", nested: { authorization: "Bearer abc", privateKey: "key", safe: "yes" } }); assert.equal(out.password, "[REDACTED]"); assert.equal(out.nested.safe, "yes"); assert.equal(JSON.stringify(out).includes("Bearer abc"), false); });
+test("missing core variable fails without exposing another secret", () => { const old = process.env.DB_HOST; process.env.DB_HOST = ""; try { assert.throws(() => validateEnvironment(), (error) => error.message.includes("DB_HOST is required") && !error.message.includes(process.env.JWT_SECRET)); } finally { process.env.DB_HOST = old; } });
+test("weak JWT secret fails validation", () => { const old = process.env.JWT_SECRET; process.env.JWT_SECRET = "short"; try { assert.throws(() => validateEnvironment(), /JWT_SECRET must be at least/); } finally { process.env.JWT_SECRET = old; } });
+test("unsupported JWT algorithm fails validation", () => { const old = process.env.JWT_ALGORITHM; process.env.JWT_ALGORITHM = "none"; try { assert.throws(() => validateEnvironment(), /JWT_ALGORITHM is unsupported/); } finally { process.env.JWT_ALGORITHM = old; } });
+
+const loadAuth = ({ user, passwordMatches = false, failureState = { failed_login_attempts: 1, locked_until: null } } = {}) => {
+  const paths = { controller: require.resolve("../backend/controllers/authController"), model: require.resolve("../backend/models/userModel"), audit: require.resolve("../backend/models/auditModel"), bcrypt: require.resolve("bcryptjs"), jwt: require.resolve("jsonwebtoken") };
+  Object.values(paths).forEach((path) => delete require.cache[path]);
+  const state = { failures: 0, successes: 0, audits: [] };
+  require.cache[paths.model] = { id: paths.model, filename: paths.model, loaded: true, exports: { createUser: async () => ({}), findUserByEmail: async () => user || null, recordLoginFailure: async () => { state.failures += 1; return failureState; }, recordLoginSuccess: async () => { state.successes += 1; } } };
+  require.cache[paths.audit] = { id: paths.audit, filename: paths.audit, loaded: true, exports: { createAuditLog: async (entry) => state.audits.push(entry) } };
+  require.cache[paths.bcrypt] = { id: paths.bcrypt, filename: paths.bcrypt, loaded: true, exports: { compare: async () => passwordMatches, hash: async () => "hash" } };
+  require.cache[paths.jwt] = { id: paths.jwt, filename: paths.jwt, loaded: true, exports: { sign: () => "safe-test-token" } };
+  return { controller: require(paths.controller), state };
+};
+const invokeLogin = async (controller) => { const output = { cookies:[], headers:{} }; await controller.login({ body: { email: "user@example.test", password: "wrong" }, ip: "127.0.0.1", get: () => "test-agent" }, { cookie(...args){output.cookies.push(args);return this},clearCookie(){return this},setHeader(k,v){output.headers[k]=v;return this},status(code) { output.status = code; return this; }, json(body) { output.body = body; return this; } }); return output; };
+const loginUser = (overrides = {}) => ({ id: "11111111-1111-4111-8111-111111111111", email: "user@example.test", password_hash: "hash", role: "verifier", institution_id: null, is_active: true, token_version: 1, failed_login_attempts: 0, locked_until: null, ...overrides });
+test("failed login increments attempts and audits failure", async () => { const loaded = loadAuth({ user: loginUser() }); const result = await invokeLogin(loaded.controller); assert.equal(result.status, 401); assert.equal(loaded.state.failures, 1); assert.equal(loaded.state.audits.at(-1).action, "LOGIN_FAILURE"); });
+test("threshold failure audits account lock", async () => { const loaded = loadAuth({ user: loginUser(), failureState: { failed_login_attempts: 5, locked_until: new Date(Date.now() + 1000) } }); await invokeLogin(loaded.controller); assert.ok(loaded.state.audits.some((entry) => entry.action === "ACCOUNT_LOCKED")); });
+test("currently locked account cannot login", async () => { const loaded = loadAuth({ user: loginUser({ locked_until: new Date(Date.now() + 60000) }), passwordMatches: true }); const result = await invokeLogin(loaded.controller); assert.equal(result.status, 423); assert.equal(loaded.state.successes, 0); });
+test("successful login sets HttpOnly cookies, omits raw token, resets attempts and audits", async () => { const loaded = loadAuth({ user: loginUser({ locked_until: new Date(Date.now() - 1000), failed_login_attempts: 5 }), passwordMatches: true }); const result = await invokeLogin(loaded.controller); assert.equal(result.status, 200); assert.equal(result.body.token, undefined); assert.equal(result.cookies[0][2].httpOnly, true); assert.equal(loaded.state.successes, 1); assert.ok(loaded.state.audits.some((entry) => entry.action === "ACCOUNT_UNLOCKED")); });
+test("unknown account does not increment and uses generic invalid credentials", async () => { const unknown = loadAuth(); const first = await invokeLogin(unknown.controller); const known = loadAuth({ user: loginUser() }); const second = await invokeLogin(known.controller); assert.equal(unknown.state.failures, 0); assert.equal(first.body.message, second.body.message); });

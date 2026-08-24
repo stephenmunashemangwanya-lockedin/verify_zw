@@ -1,0 +1,9 @@
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const validateSortField = (value, fields, fallback) => { if (value === undefined) return fallback; if (!Object.hasOwn(fields, value)) throw Object.assign(new Error("Unsupported sort field."), { statusCode: 400, code: "VALIDATION_ERROR" }); return fields[value]; };
+const validateSortOrder = (value, fallback = "DESC") => { if (value === undefined) return fallback; const order = String(value).toUpperCase(); if (!["ASC", "DESC"].includes(order)) throw Object.assign(new Error("Unsupported sort order."), { statusCode: 400, code: "VALIDATION_ERROR" }); return order; };
+const normaliseSearchTerm = (value, maximum = 200) => { if (value === undefined) return null; const search = String(value).trim(); if (search.length > maximum) throw Object.assign(new Error("Search term is too long."), { statusCode: 400, code: "VALIDATION_ERROR" }); return search || null; };
+const escapeLikePattern = (value) => String(value).replace(/[\\%_]/g, "\\$&");
+const parseOptionalUuid = (value) => { if (value === undefined || value === null || value === "") return null; if (!UUID.test(value)) throw Object.assign(new Error("UUID filter is invalid."), { statusCode: 400, code: "VALIDATION_ERROR" }); return value; };
+const parseDateRange = (from, to) => { if (from && to && from > to) throw Object.assign(new Error("Date range is invalid."), { statusCode: 400, code: "VALIDATION_ERROR" }); return { from: from || null, to: to || null }; };
+const statusBoolean = (value) => value === undefined ? null : [true, "true", "active"].includes(value) ? true : [false, "false", "inactive"].includes(value) ? false : null;
+module.exports = { validateSortField, validateSortOrder, normaliseSearchTerm, escapeLikePattern, parseOptionalUuid, parseDateRange, statusBoolean };

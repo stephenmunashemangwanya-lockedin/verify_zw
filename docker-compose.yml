@@ -1,0 +1,215 @@
+name: zsvp
+services:
+  postgres:
+    image: postgres:18.0-bookworm
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env.docker}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env.docker}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.docker}
+      POSTGRES_INITDB_ARGS: --encoding=UTF8
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks: [data]
+    security_opt: [no-new-privileges:true]
+
+  blockchain:
+    image: zsvp-blockchain:latest
+    build:
+      context: .
+      dockerfile: docker/blockchain.Dockerfile
+    ports:
+      - "127.0.0.1:${BLOCKCHAIN_PORT:-8545}:8545"
+    volumes:
+      - deployment_metadata:/app/deployments
+    restart: unless-stopped
+    networks: [application]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    profiles: [local]
+
+  migration:
+    build: .
+    command: ["node", "backend/database/runMigrations.js"]
+    environment: &backend_environment
+      NODE_ENV: development
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:?Set POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER:?Set POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+      JWT_ISSUER: zimbabwe-skill-verification-platform
+      JWT_AUDIENCE: zsvp-api
+      JWT_ALGORITHM: HS256
+      JWT_EXPIRES_IN: 8h
+      FRONTEND_PUBLIC_URL: ${FRONTEND_PUBLIC_URL:-http://localhost:5173}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
+      CORS_ALLOW_CREDENTIALS: "true"
+      AUTH_COOKIE_NAME: ${AUTH_COOKIE_NAME:-verifyzw_session}
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
+      AUTH_COOKIE_SAME_SITE: ${AUTH_COOKIE_SAME_SITE:-lax}
+      AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN:-}
+      AUTH_COOKIE_MAX_AGE_MS: ${AUTH_COOKIE_MAX_AGE_MS:-28800000}
+      AUTH_COOKIE_PATH: ${AUTH_COOKIE_PATH:-/}
+      AUTH_RETURN_BEARER_TOKEN: ${AUTH_RETURN_BEARER_TOKEN:-false}
+      CSRF_ENABLED: ${CSRF_ENABLED:-true}
+      CSRF_COOKIE_NAME: ${CSRF_COOKIE_NAME:-verifyzw_csrf}
+      CSRF_HEADER_NAME: ${CSRF_HEADER_NAME:-x-csrf-token}
+      PASSWORD_RESET_TOKEN_TTL_MINUTES: ${PASSWORD_RESET_TOKEN_TTL_MINUTES:-30}
+      PASSWORD_RESET_FRONTEND_URL: ${PASSWORD_RESET_FRONTEND_URL:-http://localhost:5173/reset-password}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-capture}
+      EMAIL_FROM: ${EMAIL_FROM:-no-reply@example.invalid}
+      EMAIL_DELIVERY_URL: ${EMAIL_DELIVERY_URL:-https://email-provider.example.invalid/password-reset}
+      EMAIL_DELIVERY_TOKEN: ${EMAIL_DELIVERY_TOKEN:-}
+      EMAIL_DELIVERY_TIMEOUT_MS: ${EMAIL_DELIVERY_TIMEOUT_MS:-5000}
+      BLOCKCHAIN_ENABLED: ${BLOCKCHAIN_ENABLED:-false}
+      BLOCKCHAIN_NETWORK: localhost
+      BLOCKCHAIN_RPC_URL: http://blockchain:8545
+      BLOCKCHAIN_CHAIN_ID: 31337
+      CONTRACT_ADDRESS: ${CONTRACT_ADDRESS:-}
+      IPFS_ENABLED: "false"
+      ENABLE_METRICS: "false"
+      ENABLE_SWAGGER: "true"
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [application, data]
+    restart: "no"
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+
+  contract-deploy:
+    image: zsvp-blockchain:latest
+    build:
+      context: .
+      dockerfile: docker/blockchain.Dockerfile
+    command: ["./node_modules/.bin/hardhat", "run", "scripts/deployCredentialRegistry.js", "--network", "localhost"]
+    environment:
+      BLOCKCHAIN_RPC_URL: http://blockchain:8545
+      BLOCKCHAIN_NETWORK: localhost
+      BLOCKCHAIN_CHAIN_ID: 31337
+      BLOCK_CONFIRMATIONS: 1
+    volumes:
+      - deployment_metadata:/app/deployments
+    depends_on:
+      blockchain: { condition: service_healthy }
+    networks: [application]
+    restart: "no"
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    profiles: [local]
+
+  backend:
+    build: .
+    environment: *backend_environment
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-3000}:3000"
+    volumes:
+      - generated_pdf:/app/output/pdf
+      - generated_qr:/app/generated/qr
+      - application_logs:/app/logs
+      - deployment_metadata:/app/deployments:ro
+    depends_on:
+      postgres: { condition: service_healthy }
+      migration: { condition: service_completed_successfully }
+      blockchain: { condition: service_healthy, required: false }
+      contract-deploy: { condition: service_completed_successfully, required: false }
+    restart: unless-stopped
+    networks: [application, data]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:3000/api}
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-5173}:8080"
+    depends_on:
+      backend: { condition: service_healthy }
+    restart: unless-stopped
+    networks: [application]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+
+  admin-tools:
+    build:
+      context: .
+      target: admin-tools
+    command: ["node", "--version"]
+    environment:
+      NODE_ENV: production
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:?Set POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER:?Set POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [data]
+    profiles: [tools]
+    restart: "no"
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+
+  backup:
+    build:
+      context: .
+      dockerfile: docker/backup.Dockerfile
+    environment:
+      BACKUP_DB_NAME: ${POSTGRES_DB:?Set POSTGRES_DB}
+      BACKUP_DB_HOST: postgres
+      BACKUP_DB_PORT: 5432
+      BACKUP_DB_USER: ${POSTGRES_USER:?Set POSTGRES_USER}
+      BACKUP_DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      BACKUP_DIRECTORY: /backups
+      BACKUP_ENVIRONMENT: development
+    volumes: ["./backups/database:/backups"]
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [data]
+    profiles: [tools]
+    restart: "no"
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+
+  restore-test:
+    build:
+      context: .
+      dockerfile: docker/backup.Dockerfile
+    command: ["node", "scripts/restoreDatabase.js", "/backups/restore.manifest.json"]
+    environment:
+      DB_NAME: ${POSTGRES_DB:?Set POSTGRES_DB}
+      TEST_DB_HOST: postgres
+      TEST_DB_PORT: 5432
+      TEST_DB_USER: ${POSTGRES_USER:?Set POSTGRES_USER}
+      TEST_DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      RESTORE_DB_NAME: skill_verification_restore_test
+      CONFIRM_TEST_RESTORE: "true"
+      RESTORE_REPORT: /restore-test/restore-report.json
+    volumes: ["./backups/database:/backups", "./restore-test:/restore-test"]
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [data]
+    profiles: [tools]
+    restart: "no"
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+
+networks:
+  application: { internal: false }
+  data: { internal: true }
+volumes:
+  postgres_data:
+  generated_pdf:
+  generated_qr:
+  application_logs:
+  deployment_metadata:

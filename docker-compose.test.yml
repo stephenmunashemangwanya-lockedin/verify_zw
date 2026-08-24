@@ -1,0 +1,43 @@
+name: zsvp-test
+services:
+  postgres_test:
+    image: postgres:18.0-bookworm
+    environment:
+      POSTGRES_DB: skill_verification_test
+      POSTGRES_USER: test_runner
+      POSTGRES_PASSWORD: ${TEST_POSTGRES_PASSWORD:?Set TEST_POSTGRES_PASSWORD}
+    tmpfs: [/var/lib/postgresql]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_runner -d skill_verification_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    networks: [test]
+    security_opt: [no-new-privileges:true]
+  blockchain_test:
+    build: { context: ., dockerfile: docker/blockchain.Dockerfile }
+    networks: [test]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+  test_runner:
+    build: { context: ., dockerfile: docker/test.Dockerfile }
+    command: ["npm", "run", "test:backend"]
+    environment:
+      NODE_ENV: test
+      TEST_DB_NAME: skill_verification_test
+      DB_NAME: skill_verification_test
+      DB_HOST: postgres_test
+      DB_PORT: 5432
+      DB_USER: test_runner
+      DB_PASSWORD: ${TEST_POSTGRES_PASSWORD:?Set TEST_POSTGRES_PASSWORD}
+      JWT_SECRET: container-test-placeholder-at-least-24-characters
+      BLOCKCHAIN_ENABLED: "false"
+      IPFS_ENABLED: "false"
+      DISABLE_RATE_LIMITS: "false"
+    depends_on:
+      postgres_test: { condition: service_healthy }
+      blockchain_test: { condition: service_healthy }
+    networks: [test]
+    restart: "no"
+networks:
+  test: { internal: true }

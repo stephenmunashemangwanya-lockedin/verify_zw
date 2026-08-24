@@ -1,0 +1,20 @@
+const crypto = require("crypto");
+const truthy = (value, fallback = false) => value === undefined ? fallback : String(value).toLowerCase() === "true";
+const sameSite = () => String(process.env.AUTH_COOKIE_SAME_SITE || "lax").toLowerCase();
+const cookieConfig = () => {
+  const secure = process.env.NODE_ENV === "production" ? true : truthy(process.env.AUTH_COOKIE_SECURE, false);
+  const maxAge = Number(process.env.AUTH_COOKIE_MAX_AGE_MS || 28800000);
+  const base = { httpOnly: true, secure, sameSite: sameSite(), path: process.env.AUTH_COOKIE_PATH || "/", maxAge };
+  if (process.env.AUTH_COOKIE_DOMAIN) base.domain = process.env.AUTH_COOKIE_DOMAIN;
+  return base;
+};
+const authCookieName = () => process.env.AUTH_COOKIE_NAME || "verifyzw_session";
+const csrfCookieName = () => process.env.CSRF_COOKIE_NAME || "verifyzw_csrf";
+const csrfHeaderName = () => String(process.env.CSRF_HEADER_NAME || "x-csrf-token").toLowerCase();
+const parseCookies = (header = "") => Object.fromEntries(String(header).split(";").map((part) => part.trim()).filter(Boolean).map((part) => { const i=part.indexOf("="); if(i<0)return[part,""];try{return[part.slice(0,i),decodeURIComponent(part.slice(i+1))]}catch{return[part.slice(0,i),""]} }));
+const csrfEnabled = () => truthy(process.env.CSRF_ENABLED, true);
+const setAuthCookies = (res, token) => { const config=cookieConfig(); const csrf=crypto.randomBytes(32).toString("base64url"); res.cookie(authCookieName(), token, config); res.cookie(csrfCookieName(), csrf, { ...config, httpOnly:false }); return csrf; };
+const clearAuthCookies = (res) => { const config=cookieConfig(); const clear={ httpOnly:true, secure:config.secure, sameSite:config.sameSite, path:config.path, ...(config.domain?{domain:config.domain}:{}) }; res.clearCookie(authCookieName(), clear); res.clearCookie(csrfCookieName(), { ...clear, httpOnly:false }); };
+const safeEqual = (a,b) => { const left=Buffer.from(String(a||"")),right=Buffer.from(String(b||"")); return left.length>0&&left.length===right.length&&crypto.timingSafeEqual(left,right); };
+const validateCsrf = (req) => { if (!csrfEnabled() || req.authSource !== "cookie" || ["GET","HEAD","OPTIONS"].includes(req.method)) return true; const cookies=parseCookies(req.headers.cookie); return safeEqual(cookies[csrfCookieName()], req.headers[csrfHeaderName()]); };
+module.exports = { cookieConfig, authCookieName, csrfCookieName, csrfHeaderName, parseCookies, csrfEnabled, setAuthCookies, clearAuthCookies, validateCsrf };

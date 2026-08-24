@@ -1,0 +1,82 @@
+{
+  "info":{"name":"Zimbabwe Skill Verification Platform API","description":"Cookie sessions are stored by the Postman cookie jar and unsafe requests echo the non-secret CSRF response proof. Bearer mode requires explicit server compatibility configuration. Uses placeholders only; mutating requests are not run automatically.","schema":"https://schema.getpostman.com/json/collection/v2.1.0/collection.json"},
+  "auth":{"type":"bearer","bearer":[{"key":"token","value":"{{token}}","type":"string"}]},
+  "event":[{"listen":"prerequest","script":{"type":"text/javascript","exec":["if (['POST','PUT','PATCH','DELETE'].includes(pm.request.method)) { const csrf = pm.environment.get('csrfToken'); if (csrf && !String(csrf).startsWith('<')) pm.request.headers.upsert({key:'X-CSRF-Token', value:csrf}); }"]}},{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Response is controlled', function () { pm.expect(pm.response.code).to.be.below(500); });","pm.test('Response time is reasonable', function () { pm.expect(pm.response.responseTime).to.be.below(30000); });","const type = pm.response.headers.get('Content-Type') || ''; if (type.includes('application/json')) { const body = pm.response.json(); pm.test('JSON has a status marker', function () { pm.expect(body).to.be.an('object'); }); }"]}}],
+  "item":[
+    {"name":"Health","item":[
+      {"name":"Public health","request":{"auth":{"type":"noauth"},"method":"GET","url":"{{baseUrl}}/health"}},
+      {"name":"Database health","request":{"method":"GET","url":"{{baseUrl}}/health/database"}},
+      {"name":"IPFS health","request":{"method":"GET","url":"{{baseUrl}}/health/ipfs"}},
+      {"name":"Blockchain health","request":{"method":"GET","url":"{{baseUrl}}/health/blockchain"}},
+      {"name":"Swagger UI","request":{"auth":{"type":"noauth"},"method":"GET","url":"{{baseUrl}}/api/docs/"}}
+    ]},
+    {"name":"Authentication","item":[
+      {"name":"Register verifier","request":{"auth":{"type":"noauth"},"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\n  \"fullName\": \"Example Verifier\",\n  \"email\": \"verifier@example.org\",\n  \"password\": \"<STRONG_PASSWORD>\",\n  \"role\": \"verifier\"\n}"},"url":"{{baseUrl}}/api/auth/register"}},
+      {"name":"Login","event":[{"listen":"test","script":{"exec":["if (pm.response.code === 200) { const body = pm.response.json(); const csrf=pm.response.headers.get('X-CSRF-Token'); if (csrf) pm.environment.set('csrfToken', csrf); if (body.token) pm.environment.set('token', body.token); pm.test('Login succeeded', () => pm.expect(body.success).to.eql(true)); }"]}}],"request":{"auth":{"type":"noauth"},"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\n  \"email\": \"admin@example.org\",\n  \"password\": \"<PASSWORD>\"\n}"},"url":"{{baseUrl}}/api/auth/login"}},
+      {"name":"Logout","request":{"method":"POST","url":"{{baseUrl}}/api/auth/logout"}},
+      {"name":"Profile","request":{"method":"GET","url":"{{baseUrl}}/api/auth/profile"}},
+      {"name":"Update profile","request":{"method":"PATCH","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"fullName\":\"Example Administrator\"}"},"url":"{{baseUrl}}/api/auth/profile"}},
+      {"name":"Change password","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"currentPassword\":\"<CURRENT_PASSWORD>\",\"newPassword\":\"<NEW_STRONG_PASSWORD>\",\"confirmPassword\":\"<NEW_STRONG_PASSWORD>\"}"},"url":"{{baseUrl}}/api/auth/change-password"}},
+      {"name":"Admin authorization probe","request":{"method":"GET","url":"{{baseUrl}}/api/auth/admin-only"}},
+      {"name":"Forgot password","request":{"auth":{"type":"noauth"},"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"email\":\"user@example.org\"}"},"url":"{{baseUrl}}/api/auth/forgot-password"}},
+      {"name":"Reset password","request":{"auth":{"type":"noauth"},"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"token\":\"<PASSWORD_RESET_TOKEN>\",\"password\":\"<NEW_STRONG_PASSWORD>\",\"confirmPassword\":\"<NEW_STRONG_PASSWORD>\"}"},"url":"{{baseUrl}}/api/auth/reset-password"}}
+    ]},
+    {"name":"Users","item":[
+      {"name":"List users","request":{"method":"GET","url":"{{baseUrl}}/api/users?page=1&limit=20&sortBy=created_at&sortOrder=desc"}},
+      {"name":"Get user","request":{"method":"GET","url":"{{baseUrl}}/api/users/{{userId}}"}},
+      {"name":"Create user","event":[{"listen":"test","script":{"exec":["if (pm.response.code === 201) pm.environment.set('userId', pm.response.json().user.id);"]}}],"request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"fullName\":\"Example Issuer\",\"email\":\"issuer@example.org\",\"role\":\"issuer\",\"institutionId\":\"{{institutionId}}\"}"},"url":"{{baseUrl}}/api/users"}},
+      {"name":"Update user","request":{"method":"PATCH","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"fullName\":\"Updated Example User\"}"},"url":"{{baseUrl}}/api/users/{{userId}}"}},
+      {"name":"Change status","request":{"method":"PATCH","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"isActive\":true}"},"url":"{{baseUrl}}/api/users/{{userId}}/status"}},
+      {"name":"Change role","request":{"method":"PATCH","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"role\":\"verifier\"}"},"url":"{{baseUrl}}/api/users/{{userId}}/role"}},
+      {"name":"Assign institution","request":{"method":"PATCH","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"institutionId\":\"{{institutionId}}\"}"},"url":"{{baseUrl}}/api/users/{{userId}}/institution"}},
+      {"name":"Initiate password reset","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{}"},"url":"{{baseUrl}}/api/users/{{userId}}/reset-password"}},
+      {"name":"Unlock account","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{}"},"url":"{{baseUrl}}/api/users/{{userId}}/unlock"}},
+      {"name":"Require password change","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{}"},"url":"{{baseUrl}}/api/users/{{userId}}/require-password-change"}}
+    ]},
+    {"name":"Institutions","item":[
+      {"name":"List institutions","request":{"method":"GET","url":"{{baseUrl}}/api/institutions?page=1&limit=20&search=University&sortBy=name&sortOrder=asc"}},
+      {"name":"Get institution","request":{"method":"GET","url":"{{baseUrl}}/api/institutions/{{institutionId}}"}},
+      {"name":"Create institution","event":[{"listen":"test","script":{"exec":["if (pm.response.code === 201) pm.environment.set('institutionId', pm.response.json().institution.id);"]}}],"request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"name\":\"Example University\",\"walletAddress\":\"<EVM_WALLET_ADDRESS>\",\"email\":\"registry@example.org\"}"},"url":"{{baseUrl}}/api/institutions"}},
+      {"name":"Change institution status","request":{"method":"PATCH","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"status\":true}"},"url":"{{baseUrl}}/api/institutions/{{institutionId}}/status"}},
+      {"name":"Authorise wallet on blockchain","request":{"method":"POST","url":"{{baseUrl}}/api/institutions/{{institutionId}}/blockchain/authorise"}},
+      {"name":"Deactivate wallet on blockchain","request":{"method":"POST","url":"{{baseUrl}}/api/institutions/{{institutionId}}/blockchain/deactivate"}}
+    ]},
+    {"name":"Students","item":[
+      {"name":"List students","request":{"method":"GET","url":"{{baseUrl}}/api/students?page=1&limit=20&search=Example&sortBy=created_at&sortOrder=desc"}},
+      {"name":"Get student","request":{"method":"GET","url":"{{baseUrl}}/api/students/{{studentId}}"}},
+      {"name":"Create student","event":[{"listen":"test","script":{"exec":["if (pm.response.code === 201) pm.environment.set('studentId', pm.response.json().student.id);"]}}],"request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"studentNumber\":\"<STUDENT_NUMBER>\",\"fullName\":\"Example Student\",\"email\":\"student@example.org\",\"programme\":\"Example Programme\",\"institutionId\":\"{{institutionId}}\"}"},"url":"{{baseUrl}}/api/students"}},
+      {"name":"Update student","request":{"method":"PATCH","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"studentNumber\":\"<STUDENT_NUMBER>\",\"fullName\":\"Updated Example Student\",\"email\":\"student@example.org\",\"programme\":\"Example Programme\"}"},"url":"{{baseUrl}}/api/students/{{studentId}}"}},
+      {"name":"Reassign credential-free student","request":{"method":"PATCH","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"institutionId\":\"{{institutionId}}\"}"},"url":"{{baseUrl}}/api/students/{{studentId}}/institution"}}
+    ]},
+    {"name":"Credentials","item":[
+      {"name":"List credentials","request":{"method":"GET","url":"{{baseUrl}}/api/credentials?page=1&limit=20&status=active&sortBy=created_at&sortOrder=desc"}},
+      {"name":"Get credential","request":{"method":"GET","url":"{{baseUrl}}/api/credentials/{{credentialId}}"}},
+      {"name":"Issue credential PDF","event":[{"listen":"test","script":{"exec":["if (pm.response.code === 201) { const body=pm.response.json(); pm.environment.set('credentialId', body.credential.id); pm.environment.set('publicToken', body.credential.public_token); pm.environment.set('certificateHash', body.credential.certificate_hash); }"]}}],"request":{"method":"POST","body":{"mode":"formdata","formdata":[{"key":"certificate","type":"file","src":"{{samplePdfPath}}"},{"key":"studentId","value":"{{studentId}}","type":"text"},{"key":"institutionId","value":"{{institutionId}}","type":"text"},{"key":"qualification","value":"Example Qualification","type":"text"},{"key":"issueDate","value":"2026-01-01","type":"text"}]},"url":"{{baseUrl}}/api/credentials/issue"}},
+      {"name":"Revoke credential - manual destructive request","request":{"method":"PATCH","header":[{"key":"Content-Type","value":"application/json"}],"body":{"mode":"raw","raw":"{\"reason\":\"Credential revoked for an approved administrative reason.\"}"},"url":"{{baseUrl}}/api/credentials/{{credentialId}}/revoke"}}
+    ]},
+    {"name":"Verification","item":[
+      {"name":"Verify PDF file","request":{"auth":{"type":"noauth"},"method":"POST","body":{"mode":"formdata","formdata":[{"key":"certificate","type":"file","src":"{{samplePdfPath}}"},{"key":"verifierName","value":"Example Employer","type":"text"},{"key":"verifierEmail","value":"verifier@example.org","type":"text"}]},"url":"{{baseUrl}}/api/verify/file"}},
+      {"name":"Verify by hash","request":{"auth":{"type":"noauth"},"method":"GET","url":"{{baseUrl}}/api/verify/hash/{{certificateHash}}"}},
+      {"name":"Verify by credential ID","request":{"auth":{"type":"noauth"},"method":"GET","url":"{{baseUrl}}/api/verify/credential/{{credentialId}}"}},
+      {"name":"Verify by public token","request":{"auth":{"type":"noauth"},"method":"GET","url":"{{baseUrl}}/api/verify/token/{{publicToken}}"}}
+    ]},
+    {"name":"Verification Logs","item":[{"name":"List verification logs","request":{"method":"GET","url":"{{baseUrl}}/api/verification-logs?page=1&limit=20&result=VERIFIED&sortBy=verification_time&sortOrder=desc"}}]},
+    {"name":"Audit Logs","item":[
+      {"name":"List audit logs","request":{"method":"GET","url":"{{baseUrl}}/api/audit-logs?page=1&limit=20&sortBy=created_at&sortOrder=desc"}},
+      {"name":"Get audit log","request":{"method":"GET","url":"{{baseUrl}}/api/audit-logs/{{auditLogId}}"}}
+    ]},
+    {"name":"Dashboard","item":[
+      {"name":"Summary","request":{"method":"GET","url":"{{baseUrl}}/api/dashboard/summary"}},
+      {"name":"Recent activity","request":{"method":"GET","url":"{{baseUrl}}/api/dashboard/recent-activity?limit=10"}},
+      {"name":"Credential trends","request":{"method":"GET","url":"{{baseUrl}}/api/dashboard/credential-trends?period=30days&groupBy=day"}},
+      {"name":"Verification trends","request":{"method":"GET","url":"{{baseUrl}}/api/dashboard/verification-trends?period=30days&groupBy=day"}},
+      {"name":"Top institutions","request":{"method":"GET","url":"{{baseUrl}}/api/dashboard/top-institutions?limit=10&sortBy=totalCredentials"}},
+      {"name":"Most verified credentials","request":{"method":"GET","url":"{{baseUrl}}/api/dashboard/most-verified-credentials?limit=10"}},
+      {"name":"Failure analytics","request":{"method":"GET","url":"{{baseUrl}}/api/dashboard/failures?page=1&limit=20"}},
+      {"name":"System health","request":{"method":"GET","url":"{{baseUrl}}/api/dashboard/system-health"}}
+    ]},
+    {"name":"QR Codes","item":[{"name":"Open QR verification destination","request":{"auth":{"type":"noauth"},"method":"GET","url":"{{baseUrl}}/api/verify/token/{{publicToken}}"}}]},
+    {"name":"Generated Certificates","item":[{"name":"Generate presentation certificate","request":{"method":"POST","url":"{{baseUrl}}/api/credentials/{{credentialId}}/generate-pdf"}},{"name":"Download presentation certificate","request":{"method":"GET","url":"{{baseUrl}}/api/credentials/{{credentialId}}/pdf"}}]},
+    {"name":"Blockchain Administration","item":[{"name":"Authorise institution wallet","request":{"method":"POST","url":"{{baseUrl}}/api/institutions/{{institutionId}}/blockchain/authorise"}},{"name":"Deactivate institution wallet - destructive","request":{"method":"POST","url":"{{baseUrl}}/api/institutions/{{institutionId}}/blockchain/deactivate"}}]}
+  ]
+}

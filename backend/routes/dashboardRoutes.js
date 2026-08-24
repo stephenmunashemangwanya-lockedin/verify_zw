@@ -1,0 +1,17 @@
+const express = require("express");
+const controller = require("../controllers/dashboardController");
+const schemas = require("../validators/dashboardValidator");
+const { validate } = require("../middleware/validationMiddleware");
+const { authenticate, requireCurrentUser, authorizeRoles } = require("../middleware/authMiddleware");
+const { sensitiveNoStore } = require("../middleware/securityMiddleware");
+const router = express.Router();
+router.use(authenticate, requireCurrentUser, sensitiveNoStore);
+router.get("/summary", validate({ query: schemas.summary }), controller.summary);
+router.get("/recent-activity", authorizeRoles("super_admin", "institution_admin", "issuer"), validate({ query: schemas.recentActivity }), controller.recentActivity);
+router.get("/credential-trends", authorizeRoles("super_admin", "institution_admin", "issuer"), validate({ query: schemas.trend }), controller.credentialTrends);
+router.get("/verification-trends", authorizeRoles("super_admin", "institution_admin", "issuer", "verifier"), validate({ query: schemas.verificationTrend }), controller.verificationTrends);
+router.get("/top-institutions", authorizeRoles("super_admin"), validate({ query: schemas.topInstitutions }), controller.topInstitutions);
+router.get("/most-verified-credentials", authorizeRoles("super_admin", "institution_admin", "issuer", "verifier"), validate({ query: schemas.mostVerified }), controller.mostVerifiedCredentials);
+router.get("/failures", authorizeRoles("super_admin", "institution_admin", "issuer"), validate({ query: schemas.failures }), controller.failures);
+router.get("/system-health", authorizeRoles("super_admin"), validate({ query: schemas.summary }), controller.systemHealth);
+module.exports = router;

@@ -1,0 +1,70 @@
+name: Deployment Preparation
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Protected target environment
+        required: true
+        type: choice
+        options: [staging, production]
+      image_tag:
+        description: Immutable sha-* or vX.Y.Z image tag
+        required: true
+        type: string
+      rollback_image_tag:
+        description: Previously verified immutable rollback tag
+        required: true
+        type: string
+      backup_verified:
+        description: Confirm a current verified backup exists
+        required: true
+        type: boolean
+      migration_plan:
+        description: Confirm the migration plan was reviewed
+        required: true
+        type: choice
+        options: [reviewed]
+      dry_run:
+        description: Stage 27 supports dry-run preparation only
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: deployment-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: github.event.repository.fork == false
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@v6.0.0
+        with:
+          node-version: 24.7.0
+          package-manager-cache: false
+      - name: Validate image, backup, migration, health, and rollback prerequisites
+        env:
+          DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+          ROLLBACK_IMAGE_TAG: ${{ inputs.rollback_image_tag }}
+          BACKUP_VERIFIED: ${{ inputs.backup_verified }}
+          MIGRATION_PLAN: ${{ inputs.migration_plan }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: node scripts/prepareDeployment.js | tee deployment-preparation.json
+      - name: Upload non-secret dry-run preparation report
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: deployment-preparation-${{ inputs.environment }}-${{ github.sha }}
+          path: deployment-preparation.json
+          if-no-files-found: error
+          retention-days: 3
