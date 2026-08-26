@@ -9,7 +9,7 @@ const root = path.resolve(__dirname, "..");
 test("OpenAPI, routes, Postman JSON, and secret scan validate", () => {
   const result = spawnSync(process.execPath, [path.join(root, "scripts", "validateDocumentation.js")], { cwd: root, encoding: "utf8" });
   assert.equal(result.status, 0, result.stderr || result.stdout);
-  assert.equal(JSON.parse(result.stdout).operations, 60);
+  assert.equal(JSON.parse(result.stdout).operations, 61);
 });
 test("OpenAPI schemas and bearer authentication parse", () => { const spec = YAML.parse(fs.readFileSync(path.join(root, "docs", "openapi.yaml"), "utf8")); assert.equal(spec.openapi, "3.0.3"); assert.equal(spec.components.securitySchemes.BearerAuth.scheme, "bearer"); assert.ok(spec.components.schemas.Pagination); assert.ok(spec.components.schemas.ValidationError); });
 test("all required API tags exist", () => { const spec = YAML.parse(fs.readFileSync(path.join(root, "docs", "openapi.yaml"), "utf8")); const tags = new Set(spec.tags.map((tag) => tag.name)); for (const name of ["Health", "Authentication", "Users", "Institutions", "Students", "Credentials", "Public Verification", "Verification Logs", "Audit Logs", "Dashboard", "QR Codes", "Generated Certificates", "Blockchain Administration"]) assert.ok(tags.has(name), name); });

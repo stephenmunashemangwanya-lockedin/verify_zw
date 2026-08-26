@@ -78,6 +78,12 @@ const getStudentById = async (id) => {
   return result.rows[0];
 };
 
+const getStudentByUserId = async (userId) => {
+  const result = await pool.query(`SELECT id, student_number, full_name, email, programme, institution_id, user_id
+    FROM students WHERE user_id = $1 LIMIT 1`, [userId]);
+  return result.rows[0];
+};
+
 const updateStudent = async (id, { studentNumber, fullName, email, programme }) => {
   const result = await pool.query(`UPDATE students SET student_number=$2, full_name=$3, email=$4, programme=$5 WHERE id=$1 RETURNING id,student_number,full_name,email,programme,institution_id,created_at`, [id, studentNumber, fullName, email || null, programme]);
   return result.rows[0];
@@ -93,6 +99,7 @@ module.exports = {
   getAllStudents,
   getStudentsByInstitution,
   getStudentById,
+  getStudentByUserId,
   updateStudent,
   studentHasCredentials,
   reassignStudentInstitution,

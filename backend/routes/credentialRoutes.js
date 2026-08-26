@@ -3,6 +3,7 @@ const express = require("express");
 const {
   issueCredential,
   listCredentials,
+  listMyCredentials,
   getOneCredential,
   revokeCredential,
   generateCredentialPdf,
@@ -27,6 +28,8 @@ const { adminActionLimiter, sensitiveNoStore } = require("../middleware/security
 router.use(authenticate, requireCurrentUser);
 router.use(sensitiveNoStore);
 
+router.get("/me", authorizeRoles("student"), validate({ query: schemas.listQuery }), listMyCredentials);
+
 router.get(
   "/",
   authorizeRoles(
@@ -45,7 +48,8 @@ router.get(
     "super_admin",
     "institution_admin",
     "issuer",
-    "verifier"
+    "verifier",
+    "student"
   ),
   validate({ params: schemas.idParams }),
   getOneCredential
@@ -63,7 +67,7 @@ router.post(
   issueCredential
 );
 
-router.get("/:id/pdf", authorizeRoles("super_admin", "institution_admin", "issuer", "verifier"), validate({ params: schemas.idParams }), downloadCredentialPdf);
+router.get("/:id/pdf", authorizeRoles("super_admin", "institution_admin", "issuer", "verifier", "student"), validate({ params: schemas.idParams }), downloadCredentialPdf);
 
 router.patch(
   "/:id/revoke",

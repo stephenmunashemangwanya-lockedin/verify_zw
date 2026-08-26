@@ -58,7 +58,7 @@ const requireCurrentUser = async (req, res, next) => {
     const current = await findUserForAuthentication(req.user.userId);
     if (!current) return res.status(401).json({ success: false, message: "Authentication state is no longer valid.", code: "INVALID_CREDENTIALS" });
     if (!current.is_active) return res.status(403).json({ success: false, message: "This account is inactive.", code: "ACCOUNT_INACTIVE" });
-    if (current.role !== "super_admin" && (!current.institution_id || current.institution_active === false)) return res.status(403).json({ success: false, message: "Institutional access is inactive or unassigned.", code: "INSTITUTION_ACCESS_INACTIVE" });
+    if (current.role !== "super_admin" && current.role !== "student" && (!current.institution_id || current.institution_active === false)) return res.status(403).json({ success: false, message: "Institutional access is inactive or unassigned.", code: "INSTITUTION_ACCESS_INACTIVE" });
     if (Number(current.token_version) !== Number(req.user.tokenVersion)) return res.status(401).json({ success: false, message: "Authentication state is no longer valid.", code: "INVALID_CREDENTIALS" });
     const route = `${req.baseUrl || ""}${req.path || ""}`;
     if (current.must_change_password && !["/api/auth/profile","/api/auth/change-password","/api/auth/logout"].some((allowed) => route.endsWith(allowed))) return res.status(403).json({ success:false, message:"Password change is required.", code:"PASSWORD_CHANGE_REQUIRED" });

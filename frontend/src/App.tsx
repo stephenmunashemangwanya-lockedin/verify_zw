@@ -63,6 +63,7 @@ const StudentDetail = lazy(() =>
     default: module.StudentDetail,
   }))
 );
+const MyCredentials = lazy(() => import("./pages/MyCredentials").then((module) => ({ default: module.MyCredentials })));
 const Public = ({ children }: { children: React.ReactNode }) => (
   <PublicLayout>{children}</PublicLayout>
 );
@@ -162,6 +163,9 @@ export default function App() {
               element={<CreatePage kind="credentials" />}
             />
             <Route path="credentials/:id" element={<CredentialDetail />} />
+            <Route element={<RoleGuard roles={["student"]} />}>
+              <Route path="my-credentials" element={<MyCredentials />} />
+            </Route>
             <Route
               path="verifications"
               element={<ManagementPage kind="verification-logs" />}

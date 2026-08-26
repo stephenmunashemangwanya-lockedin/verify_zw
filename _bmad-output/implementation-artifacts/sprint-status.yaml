@@ -1,0 +1,154 @@
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created, ready for development
+#   - in-progress: Developer actively working on implementation
+#   - review: Implementation complete, ready for review
+#   - done: Story completed
+
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+
+# Action Item Status:
+#   - open: Committed during a retrospective, not yet addressed
+#   - in-progress: Actively being worked on
+#   - done: Completed
+
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when its first story starts (via build's sprint sync)
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates the next story after the previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Retrospective appends its action items to action_items; the status view surfaces open ones
+generated: 08-18-2026 16:30
+last_updated: 08-20-2026 11:00
+project: Zimbabwe Skill Verification Platform
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+development_status:
+  epic-1: done
+  1-1-verify-jwt-authentication-with-session-management: done
+  1-2-verify-role-based-access-control-enforcement: done
+  1-3-verify-institution-scope-enforcement: done
+  1-4-verify-token-version-invalidation-on-sensitive-changes: done
+  1-5-verify-account-inactivity-timeout: done
+  epic-1-retrospective: optional
+
+  epic-2: done
+  2-1-verify-institution-creation-and-activation: done
+  2-2-verify-institution-status-management: done
+  2-3-verify-institution-wallet-authorization: done
+  2-4-add-validated-institution-selector-in-ui: done
+  epic-2-retrospective: optional
+
+  epic-3: done
+  3-1-verify-student-creation-with-institution-scope: done
+  3-2-verify-student-listing-with-search-and-pagination: done
+  3-3-verify-student-detail-view: done
+  3-4-implement-student-record-update-edit-backend: done
+  3-5-implement-student-record-update-edit-frontend: done
+  3-6-add-validated-student-selector-in-credential-workflows: done
+  epic-3-retrospective: optional
+
+  epic-4: done
+  4-1-verify-pdf-upload-and-validation: done
+  4-2-verify-document-hashing-and-ipfs-pinning: done
+  4-3-verify-blockchain-proof-issuance: done
+  4-4-verify-credential-status-lifecycle: done
+  4-5-implement-direct-authorized-pdf-download: done
+  epic-4-retrospective: optional
+
+  epic-5: done
+  5-1-verify-verification-by-hash: done
+  5-2-verify-verification-by-credential-id: done
+  5-3-verify-verification-by-public-token: done
+  5-4-verify-revocation-workflow: done
+  5-5-verify-consistency-checks-db-vs-blockchain: done
+  epic-5-retrospective: optional
+
+  epic-6: done
+  6-1-verify-public-verification-routes: done
+  6-2-verify-qr-code-generation-and-resolution: done
+  6-3-verify-verification-result-display: done
+  6-4-verify-public-verification-does-not-expose-institutional-dat: done
+  epic-6-retrospective: optional
+
+  epic-7: done
+  7-1-verify-audit-log-recording-and-queries: done
+  7-2-verify-dashboard-analytics: done
+  7-3-verify-health-endpoints: done
+  7-4-verify-metrics-exposure: done
+  7-5-verify-structured-logging-with-correlation-ids: done
+  epic-7-retrospective: optional
+
+  epic-8: done
+  8-1-verify-environment-validation-and-fail-closed-startup: done
+  8-2-verify-database-migration-with-checksum-validation: done
+  8-3-verify-backup-with-integrity-verification: done
+  8-4-verify-restore-test-workflow: done
+  8-5-verify-blockchain-state-reconciliation: done
+  epic-8-retrospective: optional
+
+  epic-9: done
+  9-1-implement-secure-first-super-admin-bootstrap-cli: done
+  9-2-implement-admin-password-recovery-cli: done
+  9-3-implement-admin-password-reset-token-management: done
+  epic-9-retrospective: optional
+
+  epic-10: done
+  10-1-implement-httponly-cookie-authentication: done
+  10-2-implement-csrf-protection: done
+  10-3-verify-secure-cors-configuration: done
+  10-4-verify-session-invalidation-on-logout: done
+  epic-10-retrospective: optional
+
+  epic-11: done
+  11-1-implement-forgot-password-endpoint: done
+  11-2-implement-reset-password-with-token-validation: done
+  11-3-implement-mail-adapter-integration: done
+  11-4-implement-frontend-forgot-reset-password-pages: done
+  epic-11-retrospective: optional
+
+  epic-12: done
+  12-1-implement-route-level-code-splitting: done
+  12-2-implement-bundle-size-analysis-and-optimization: done
+  12-3-validate-security-headers: done
+  12-4-implement-dependency-vulnerability-audit: done
+  12-5-implement-fresh-container-security-scan: done
+  epic-12-retrospective: optional
+
+  epic-13: done
+  13-1-perform-manual-wcag-2-2-aa-audit: done
+  13-2-remediate-accessibility-defects: done
+  13-3-establish-visual-regression-baseline: done
+  13-4-implement-visual-regression-test-suite: done
+  epic-13-retrospective: optional
+
+  epic-14: done
+  14-1-design-load-test-scenarios: done
+  14-2-implement-and-execute-repeatable-load-tests: done
+  14-3-define-performance-thresholds-and-release-gates: done
+  14-4-analyze-bottlenecks-and-optimize: done
+  epic-14-retrospective: optional
+
+  epic-15: in-progress
+  15-1-validate-docker-runtime: in-progress
+  15-2-validate-github-actions-workflows: done
+  15-3-implement-container-image-scanning: done
+  15-4-validate-sbom-generation-and-documentation: done
+  epic-15-retrospective: optional
+
+  epic-16: done
+  16-1-create-env-staging-example-with-placeholders: done
+  16-2-create-staging-deployment-configuration: done
+  16-3-create-infrastructure-documentation-package: done
+  epic-16-retrospective: optional

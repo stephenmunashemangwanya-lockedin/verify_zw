@@ -242,6 +242,7 @@ const listCredentials = async ({ institutionId = null, studentId = null, search 
 };
 const getAllCredentials = (options = {}) => listCredentials(options);
 const getCredentialsByInstitution = (institutionId, options = {}) => listCredentials({ ...options, institutionId });
+const getCredentialsByStudent = (studentId, options = {}) => listCredentials({ ...options, studentId });
 
 const findCredentialByHash = async (
   certificateHash
@@ -294,6 +295,7 @@ module.exports = {
   getCredentialById,
   getAllCredentials,
   getCredentialsByInstitution,
+  getCredentialsByStudent,
   listCredentials,
   findCredentialByHash,
 };

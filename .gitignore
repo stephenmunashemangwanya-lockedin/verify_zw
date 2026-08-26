@@ -37,3 +37,6 @@ sql results.sql
 *.tsbuildinfo
 sbom/
 deployment-preparation/
+.agents/
+.claude/
+_bmad/

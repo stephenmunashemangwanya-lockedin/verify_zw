@@ -11,11 +11,13 @@ const {
   getCredentialById,
   getAllCredentials,
   getCredentialsByInstitution,
+  getCredentialsByStudent,
   findCredentialByHash,
 } = require("../models/credentialModel");
 
 const {
   getStudentById,
+  getStudentByUserId,
 } = require("../models/studentModel");
 
 const {
@@ -46,6 +48,16 @@ const requestAuditContext = (req) => ({
   ipAddress: req.ip,
   userAgent: req.get?.("user-agent") || null,
 });
+
+const studentOwnsCredential = async (req, credential) => {
+  if (req.user.role !== "student") return true;
+  const student = await getStudentByUserId(req.user.userId);
+  const permitted = Boolean(student && student.id === credential.student_id);
+  if (!permitted) {
+    await createAuditLog({ ...requestAuditContext(req), action: "UNAUTHORIZED_CREDENTIAL_ACCESS", entityType: "credential", entityId: credential.id, details: { reason: "student_ownership_mismatch" } }).catch(() => {});
+  }
+  return permitted;
+};
 
 const safeProcessingError = (error) => {
   const allowedCodes = new Set([
@@ -427,8 +439,12 @@ const getOneCredential = async (req, res) => {
       });
     }
 
+    if (!(await studentOwnsCredential(req, credential))) {
+      return res.status(403).json({ success: false, message: "You cannot access this credential.", code: "ACCESS_DENIED" });
+    }
     if (
       req.user.role !== "super_admin" &&
+      req.user.role !== "student" &&
       req.user.institutionId !==
         credential.institution_id
     ) {
@@ -439,6 +455,7 @@ const getOneCredential = async (req, res) => {
       });
     }
 
+    if (req.user.role === "student") await createAuditLog({ ...requestAuditContext(req), institutionId: credential.institution_id, action: "STUDENT_CREDENTIAL_VIEW", entityType: "credential", entityId: credential.id, details: {} });
     return res.status(200).json({
       success: true,
       credential,
@@ -512,6 +529,20 @@ const revokeCredential = async (req, res) => {
   }
 };
 
+const listMyCredentials = async (req, res) => {
+  try {
+    const student = await getStudentByUserId(req.user.userId);
+    if (!student) return res.status(403).json({ success: false, message: "No student profile is linked to this account.", code: "STUDENT_PROFILE_REQUIRED" });
+    const { paginationFromQuery, buildPaginationMetadata } = require("../utils/pagination");
+    const paging = paginationFromQuery(req.query);
+    const result = await getCredentialsByStudent(student.id, { ...paging, status: req.query.status || null });
+    return res.status(200).json({ success: true, credentials: result.rows, pagination: buildPaginationMetadata({ page: paging.page, limit: paging.limit, total: result.total }) });
+  } catch (error) {
+    require("../utils/logger").log("error", "student_credential_listing_failed", { errorCode: error.code || "DATABASE_ERROR" });
+    return res.status(500).json({ success: false, message: "Failed to retrieve your credentials." });
+  }
+};
+
 const generateCredentialPdf = async (req, res) => {
   try {
     const credential = await getCredentialById(req.params.id);
@@ -530,7 +561,8 @@ const downloadCredentialPdf = async (req, res) => {
   try {
     const credential = await getCredentialById(req.params.id);
     if (!credential) return res.status(404).json({ success: false, message: "Credential not found." });
-    if (req.user.role !== "super_admin" && req.user.institutionId !== credential.institution_id) return res.status(403).json({ success: false, message: "You cannot download certificates from another institution." });
+    if (!(await studentOwnsCredential(req, credential))) return res.status(403).json({ success: false, message: "You cannot access this credential.", code: "ACCESS_DENIED" });
+    if (req.user.role !== "super_admin" && req.user.role !== "student" && req.user.institutionId !== credential.institution_id) return res.status(403).json({ success: false, message: "You cannot download certificates from another institution." });
     if (!["active", "revoked"].includes(credential.status)) return res.status(404).json({ success: false, message: "Presentation certificate is unavailable." });
     const path = require("path");
     const directory = path.resolve(__dirname, "../../output/pdf");
@@ -539,7 +571,7 @@ const downloadCredentialPdf = async (req, res) => {
     if (path.dirname(filePath) !== directory || path.extname(filePath).toLowerCase() !== ".pdf") return res.status(404).json({ success: false, message: "Presentation certificate is unavailable." });
     await fs.promises.access(filePath, fs.constants.R_OK);
     res.status(200); res.setHeader("Content-Type", "application/pdf"); res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-    await createAuditLog({ ...requestAuditContext(req), institutionId: credential.institution_id, action: "CREDENTIAL_PDF_DOWNLOADED", entityType: "credential", entityId: credential.id, details: { artifact: "generated_presentation_pdf" } });
+    await createAuditLog({ ...requestAuditContext(req), institutionId: credential.institution_id, action: req.user.role === "student" ? "STUDENT_CERTIFICATE_DOWNLOAD" : "CREDENTIAL_PDF_DOWNLOADED", entityType: "credential", entityId: credential.id, details: { artifact: "generated_presentation_pdf" } });
     return fs.createReadStream(filePath).pipe(res);
   } catch (error) {
     if (error.code === "ENOENT") return res.status(404).json({ success: false, message: "Presentation certificate is unavailable." });
@@ -551,6 +583,7 @@ const downloadCredentialPdf = async (req, res) => {
 module.exports = {
   issueCredential,
   listCredentials,
+  listMyCredentials,
   getOneCredential,
   revokeCredential,
   generateCredentialPdf,
