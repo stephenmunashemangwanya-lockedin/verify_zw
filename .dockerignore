@@ -1,4 +1,7 @@
 .git
+.agents/
+.claude/
+_bmad/
 .env
 .env.*
 !.env.example
