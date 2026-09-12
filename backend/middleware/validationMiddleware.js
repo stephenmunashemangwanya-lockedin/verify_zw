@@ -5,7 +5,9 @@ const validate = (schemas = {}) => async (req, res, next) => {
     if (!schemas[location]) continue;
     const result = schemas[location].safeParse(req[location] || {});
     if (!result.success) errors.push(...result.error.issues.map((issue) => ({ field: [location, ...issue.path].join("."), message: issue.message })));
-    else if (location === "query") Object.assign(req.query, result.data);
+    // Express 5 exposes query through a getter that returns a fresh object.
+    // Shadow it on this request so every downstream consumer sees validation.
+    else if (location === "query") Object.defineProperty(req, "query", { value: result.data, writable: true, enumerable: true, configurable: true });
     else req[location] = result.data;
   }
   if (!errors.length) return next();
