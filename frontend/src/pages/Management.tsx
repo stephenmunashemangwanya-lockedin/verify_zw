@@ -22,6 +22,9 @@ const responseKey: Record<Kind, string> = {
   "audit-logs": "auditLogs",
 };
 export function ManagementPage({ kind }: { kind: Kind }) {
+  return <ManagementList key={kind} kind={kind} />;
+}
+function ManagementList({ kind }: { kind: Kind }) {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
@@ -35,8 +38,8 @@ export function ManagementPage({ kind }: { kind: Kind }) {
         params: {
           page,
           limit: 20,
-          search: debounced || undefined,
-          status: status || undefined,
+          search: kind === "verification-logs" ? undefined : debounced || undefined,
+          ...(kind === "verification-logs" ? { result: status || undefined } : ["institutions", "users", "credentials"].includes(kind) ? { status: status || undefined } : {}),
           sortBy: sort || undefined,
         },
       });
@@ -44,7 +47,7 @@ export function ManagementPage({ kind }: { kind: Kind }) {
     },
   });
   const rows = (q.data?.[responseKey[kind]] || []) as JsonRecord[];
-  const columns = useMemo(() => columnsFor(kind, setSort), [kind]);
+  const columns = useMemo(() => columnsFor(kind), [kind]);
   return (
     <div className="page">
       <div className="page-head">
@@ -60,7 +63,7 @@ export function ManagementPage({ kind }: { kind: Kind }) {
       </div>
       <Card>
         <div className="filters">
-          <label>
+          {kind !== "verification-logs" && <label>
             Search
             <input
               type="search"
@@ -70,18 +73,14 @@ export function ManagementPage({ kind }: { kind: Kind }) {
                 setPage(1);
               }}
             />
-          </label>
-          <label>
-            Status
-            <select value={status} onChange={(e) => setStatus(e.target.value)}>
-              <option value="">All statuses</option>
-              <option>active</option>
-              <option>pending</option>
-              <option>processing</option>
-              <option>failed</option>
-              <option>revoked</option>
+          </label>}
+          {["institutions", "users", "credentials", "verification-logs"].includes(kind) && <label>
+            {kind === "verification-logs" ? "Result" : "Status"}
+            <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}>
+              <option value="">All</option>
+              {(kind === "verification-logs" ? ["VERIFIED", "REVOKED", "UNKNOWN", "PENDING", "FAILED", "SYSTEM_INCONSISTENCY", "INVALID_FILE"] : kind === "credentials" ? ["pending", "processing", "active", "failed", "revoked"] : ["active", "inactive"]).map(value => <option key={value}>{value}</option>)}
             </select>
-          </label>
+          </label>}
         </div>
         <DataTable
           rows={rows}
@@ -92,7 +91,7 @@ export function ManagementPage({ kind }: { kind: Kind }) {
           totalPages={q.data?.pagination?.totalPages || 1}
           tableLabel={title(kind)}
           onPage={setPage}
-          onSort={setSort}
+          onSort={(value) => { setSort(value); setPage(1); }}
         />
       </Card>
     </div>
@@ -107,68 +106,18 @@ function title(k: string) {
 function canCreate(k: Kind) {
   return ["institutions", "users", "students", "credentials"].includes(k);
 }
-function columnsFor(
-  k: Kind,
-  setSort: (s: string) => void
-): Column<JsonRecord>[] {
-  const name = (r: JsonRecord) =>
-    String(
-      r.name ||
-        r.full_name ||
-        r.fullName ||
-        r.qualification ||
-        r.action ||
-        r.verifier_name ||
-        "—"
-    );
-  return [
-    {
-      key: "name",
-      label: k === "audit-logs" ? "Action" : "Name / qualification",
-      sortable: true,
-      render: (r) =>
-        k === "users" || k === "students" ? (
-          <Link to={`/app/${k}/${String(r.id)}`}>{name(r)}</Link>
-        ) : (
-          <button className="link-button" onClick={() => setSort("name")}>
-            {name(r)}
-          </button>
-        ),
-    },
-    {
-      key: "id",
-      label: "Reference",
-      render: (r) => (
-        <code>{String(r.id || r.credential_id || "—").slice(0, 14)}</code>
-      ),
-    },
-    {
-      key: "status",
-      label: "Status / result",
-      render: (r) => (
-        <Badge
-          value={String(
-            r.status ||
-              r.result ||
-              r.isActive === false ||
-              r.is_active === false
-              ? "inactive"
-              : "active"
-          )}
-        />
-      ),
-    },
-    {
-      key: "date",
-      label: "Date",
-      sortable: true,
-      render: (r) =>
-        String(r.createdAt || r.created_at || r.verification_time || "—").slice(
-          0,
-          10
-        ),
-    },
-  ];
+function columnsFor(k: Kind): Column<JsonRecord>[] {
+  const text = (key: string, label: string, sortable = false, field = key): Column<JsonRecord> => ({ key, label, sortable, render: r => String(r[field] ?? "?") });
+  const linked = (key: string, label: string, field = key): Column<JsonRecord> => ({ key, label, sortable: true, render: r => <Link to={`/app/${k}/${String(r.id)}`}>{String(r[field] ?? "?")}</Link> });
+  const badge = (key: string, label: string, field = key): Column<JsonRecord> => ({ key, label, sortable: true, render: r => <Badge value={typeof r[field] === "boolean" ? r[field] ? "active" : "inactive" : String(r[field] ?? "Unknown")} /> });
+  switch (k) {
+    case "institutions": return [text("name", "Institution", true), text("email", "Email", true), badge("status", "Status"), text("created_at", "Created", true)];
+    case "users": return [linked("full_name", "Name", "fullName"), text("email", "Email", true), text("role", "Role", true), badge("is_active", "Status", "isActive"), text("created_at", "Created", true, "createdAt")];
+    case "students": return [linked("full_name", "Student"), text("student_number", "Student number", true), text("programme", "Programme", true), text("institution_name", "Institution"), text("created_at", "Created", true)];
+    case "credentials": return [linked("qualification", "Qualification"), text("student_name", "Student"), text("institution_name", "Institution"), badge("status", "Status"), text("issue_date", "Issue date", true)];
+    case "verification-logs": return [text("credential_id", "Credential ID"), {key: "result", label: "Result", sortable: true, render: r => <Badge value={String(r.result_code ?? r.result ?? "Unknown")} />}, text("verification_method", "Method", true), text("verification_time", "Verified at", true)];
+    case "audit-logs": return [text("action", "Action", true), text("entity_type", "Entity type", true), text("entity_id", "Entity ID"), text("created_at", "Created", true)];
+  }
 }
 function useDebounce(v: string) {
   const [state, setState] = useState(v);
@@ -262,7 +211,9 @@ export function CreatePage({
           {kind === "institutions" && (
             <>
               <Field name="name" label="Institution name" />
-              <Field name="code" label="Institution code" />
+              <Field name="walletAddress" label="Wallet address" />
+              <Field name="email" label="Email" type="email" />
+              <label>Phone (optional)<input name="phone" type="tel" maxLength={30} /></label>
             </>
           )}
           {kind === "users" && (
