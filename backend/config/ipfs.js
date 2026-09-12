@@ -40,6 +40,9 @@ const normaliseApiUrl = (value) => {
 /** Load configuration lazily so unrelated API routes can start safely even
  * when IPFS is not configured. Secrets are never included in errors or logs. */
 const getIpfsConfig = () => {
+  if (process.env.IPFS_ENABLED !== "true") {
+    throw new IpfsConfigurationError("IPFS_ENABLED must be true for credential storage operations.");
+  }
   const provider = (process.env.IPFS_PROVIDER || SUPPORTED_PROVIDER).toLowerCase();
   if (provider !== SUPPORTED_PROVIDER) {
     throw new IpfsConfigurationError(`Unsupported IPFS provider: ${provider}.`);

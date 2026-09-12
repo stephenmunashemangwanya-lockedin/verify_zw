@@ -7,6 +7,13 @@ pinning permissions needed by this application, store it in `.env`, and never
 place it in source control, API responses, URLs, or logs. `.env.example`
 contains safe placeholders for every required setting.
 
+Local UAT uses the same real-provider contract: set `IPFS_ENABLED=true` and
+provide an operator-supplied Pinata JWT, API URL, and HTTPS gateway. There is
+no local fake or silent fallback provider. With IPFS disabled, credential
+storage fails closed before any provider request. CI uses mocked HTTP/model
+dependencies for isolated tests only; those tests do not claim a real Pinata
+upload.
+
 Configuration is loaded lazily. Missing or invalid IPFS configuration causes a
 controlled `503` during credential issuance while unrelated APIs remain able
 to start. Only HTTPS gateway URLs are accepted.

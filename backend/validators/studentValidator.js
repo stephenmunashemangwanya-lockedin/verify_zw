@@ -1,9 +1,10 @@
 const { z, uuid, email, trimmed } = require("./commonValidator");
 const { pagination } = require("./paginationValidator");
 const idParams = z.object({ id: uuid }).strict();
+const accountLink = z.object({ userId: uuid }).strict();
 const studentNumber = trimmed("Student number", 80).regex(/^[A-Za-z0-9][A-Za-z0-9._/-]*$/, "Student number contains unsupported characters.");
 const create = z.object({ studentNumber, fullName: trimmed("Full name", 150, 2), email: email.optional(), programme: trimmed("Programme", 200, 2), institutionId: uuid }).strict();
 const update = z.object({ studentNumber, fullName: trimmed("Full name", 150, 2), email: email.optional().nullable(), programme: trimmed("Programme", 200, 2) }).strict();
 const institution = z.object({ institutionId: uuid }).strict();
 const listQuery = pagination(["created_at", "student_number", "full_name", "programme"]).extend({ institutionId: uuid.optional(), programme: z.string().trim().max(200).optional() }).strict();
-module.exports = { idParams, create, update, institution, listQuery, studentNumber };
+module.exports = { idParams, accountLink, create, update, institution, listQuery, studentNumber };

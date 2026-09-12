@@ -6,6 +6,7 @@ const {
   getOne,
   update,
   assignInstitution,
+  linkAccount,
 } = require("../controllers/studentController");
 
 const {
@@ -61,5 +62,6 @@ router.post(
 
 router.patch("/:id", authorizeRoles("super_admin", "institution_admin", "issuer"), validate({ params: schemas.idParams, body: schemas.update }), update);
 router.patch("/:id/institution", authorizeRoles("super_admin"), validate({ params: schemas.idParams, body: schemas.institution }), assignInstitution);
+router.post("/:id/account", authorizeRoles("super_admin", "institution_admin"), validate({ params: schemas.idParams, body: schemas.accountLink }), linkAccount);
 
 module.exports = router;

@@ -9,6 +9,7 @@ const originalEnvironment = { ...process.env };
 const originalFetch = global.fetch;
 
 const configureIpfs = () => {
+  process.env.IPFS_ENABLED = "true";
   process.env.IPFS_PROVIDER = "pinata";
   process.env.PINATA_JWT = "test-jwt-never-sent";
   process.env.PINATA_GATEWAY = "https://gateway.pinata.cloud/ipfs";
@@ -41,7 +42,15 @@ test("CID validation accepts CIDv0 and rejects malformed input", () => {
 });
 
 test("missing Pinata JWT fails safely", async () => {
+  process.env.IPFS_ENABLED = "true";
   delete process.env.PINATA_JWT;
+  const { uploadFileToIPFS } = require("../backend/services/ipfsService");
+  await assert.rejects(() => uploadFileToIPFS("missing.pdf"), { code: "IPFS_CONFIGURATION_ERROR" });
+});
+
+test("disabled IPFS fails closed without attempting provider configuration", async () => {
+  process.env.IPFS_ENABLED = "false";
+  process.env.PINATA_JWT = "test-jwt-never-sent";
   const { uploadFileToIPFS } = require("../backend/services/ipfsService");
   await assert.rejects(() => uploadFileToIPFS("missing.pdf"), { code: "IPFS_CONFIGURATION_ERROR" });
 });

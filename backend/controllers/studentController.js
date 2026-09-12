@@ -6,7 +6,9 @@ const {
   updateStudent,
   studentHasCredentials,
   reassignStudentInstitution,
+  linkStudentToUser,
 } = require("../models/studentModel");
+const { findUserForAuthentication } = require("../models/userModel");
 const { getInstitutionById } = require("../models/institutionModel");
 const { createAuditLog } = require("../models/auditModel");
 const { paginationFromQuery, buildPaginationMetadata } = require("../utils/pagination");
@@ -192,10 +194,37 @@ const assignInstitution = async (req, res) => {
   }
 };
 
+const linkAccount = async (req, res) => {
+  try {
+    const student = await getStudentById(req.params.id);
+    if (!student) return res.status(404).json({ success: false, message: "Student not found." });
+    if (req.user.role !== "super_admin" && req.user.institutionId !== student.institution_id) {
+      return res.status(403).json({ success: false, message: "You cannot link an account outside your institution." });
+    }
+    if (student.user_id) return res.status(409).json({ success: false, message: "This student is already linked to an account." });
+
+    const user = await findUserForAuthentication(req.body.userId);
+    if (!user) return res.status(404).json({ success: false, message: "Student account not found." });
+    if (user.role !== "student") return res.status(422).json({ success: false, message: "Only student accounts may be linked to student records." });
+    if (!user.is_active || user.institution_active === false) return res.status(403).json({ success: false, message: "The student account or institution is inactive." });
+    if (user.institution_id !== student.institution_id) return res.status(403).json({ success: false, message: "The student account must belong to the same institution." });
+
+    const linked = await linkStudentToUser(student.id, user.id);
+    if (!linked) return res.status(409).json({ success: false, message: "The student or account is already linked." });
+    await createAuditLog({ userId: req.user.userId, institutionId: student.institution_id, action: "STUDENT_ACCOUNT_LINKED", entityType: "student", entityId: student.id, details: { accountUserId: user.id }, ipAddress: req.ip, userAgent: req.get?.("user-agent") || null });
+    return res.status(200).json({ success: true, message: "Student account linked successfully.", student: linked });
+  } catch (error) {
+    if (error.code === "23505") return res.status(409).json({ success: false, message: "The student account is already linked to a student record." });
+    require("../utils/logger").log("error", "student_account_link_failed", { errorCode: error.code || "DATABASE_ERROR" });
+    return res.status(500).json({ success: false, message: "Failed to link student account." });
+  }
+};
+
 module.exports = {
   create,
   list,
   getOne,
   update,
   assignInstitution,
+  linkAccount,
 };

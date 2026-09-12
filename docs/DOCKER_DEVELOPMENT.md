@@ -10,6 +10,8 @@ Hardhat state is intentionally ephemeral. A container restart or recreation can 
 
 Use `docker compose --env-file .env.docker --profile local stop` followed by `npm run docker:up` for a normal restart. Never use `docker compose down -v` unless intentionally destroying all named data.
 
+Local credential issuance requires the real Pinata provider: set `IPFS_ENABLED=true`, `PINATA_JWT`, `IPFS_PROVIDER_API_URL`, and `PINATA_GATEWAY` in the ignored `.env.docker` file. The Compose defaults keep IPFS disabled and never fabricate a local CID.
+
 `npm run docker:down` preserves volumes. `npm run docker:down:volumes` is destructive and removes named database and application volumes.
 
 The container backup tools are pinned to PostgreSQL 18 to match the development server. Run `npm run docker:backup`, select the generated manifest as `backups/database/restore.manifest.json`, and run `npm run docker:restore:test`; restoration is restricted to `skill_verification_restore_test`. If the server major changes, update the utility runtime to the same official PostgreSQL major, rebuild without cache, verify `pg_dump`, `pg_restore`, and `psql` versions, and repeat the isolated backup/restore validation.
