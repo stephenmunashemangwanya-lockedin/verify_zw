@@ -35,12 +35,16 @@ export function Dashboard() {
     queryFn: () => get("/dashboard/top-institutions"),
     enabled: user?.role === "super_admin",
   });
-  const values =
-    summary.data && typeof summary.data === "object"
-      ? Object.entries(summary.data)
-          .filter(([, v]) => typeof v === "number")
-          .slice(0, 8)
-      : [];
+  const metrics: Record<string, string[]> = {
+    institutions: ["total", "active", "inactive"],
+    users: ["total", "active", "inactive"],
+    students: ["total"],
+    credentials: ["total", "pending", "processing", "active", "failed", "revoked"],
+    verifications: ["total", "verified", "revoked", "unknown", "pending", "failed", "inconsistency"],
+  };
+  const values = Object.entries(metrics).flatMap(([group, fields]) =>
+    fields.filter(field => typeof summary.data?.[group]?.[field] === "number")
+      .map(field => [`${group} ${field}`, summary.data[group][field]] as const));
   return (
     <div className="page">
       <div className="page-head">
@@ -67,11 +71,11 @@ export function Dashboard() {
       </State>
       <div className="chart-grid">
         {user?.role !== "verifier" && (
-          <ChartCard title="Credential activity" query={ct} type="area" />
+          <ChartCard title="Credential activity" query={ct} type="area" kind="credentials" />
         )}
-        <ChartCard title="Verification activity" query={vt} type="bar" />
+        <ChartCard title="Verification activity" query={vt} type="bar" kind="verifications" />
         {user?.role === "super_admin" && (
-          <ChartCard title="Top institutions" query={top} type="bar" />
+          <ChartCard title="Top institutions" query={top} type="bar" kind="institutions" />
         )}
       </div>
     </div>
@@ -81,39 +85,47 @@ function ChartCard({
   title,
   query,
   type,
+  kind,
 }: {
   title: string;
   query: { isLoading: boolean; error: unknown; data: unknown };
   type: "area" | "bar";
+  kind: "credentials" | "verifications" | "institutions";
 }) {
-  const raw = query.data as Record<string, unknown> | unknown[] | undefined;
-  const data = Array.isArray(raw)
-    ? raw
-    : (raw && (Object.values(raw).find(Array.isArray) as unknown[])) || [];
+  const raw = query.data as { series?: Record<string, unknown>[] } | Record<string, unknown>[] | undefined;
+  const data = kind === "institutions" ? (Array.isArray(raw) ? raw : []) : (!Array.isArray(raw) && Array.isArray(raw?.series) ? raw.series : []);
+  const axis = kind === "institutions" ? "institution_name" : "period";
+  const series = kind === "credentials" ? ["issued", "activated", "failed", "revoked"] : kind === "institutions" ? ["total_credentials"] : ["total"];
+  const colors = ["#08775d", "#315db0", "#b5252d", "#805019"];
   return (
     <Card title={title}>
-      <State loading={query.isLoading} error={query.error} empty={!data.length}>
+      <State loading={query.isLoading} error={query.error}>
+        {!data.length ? <div className="empty">No {title.toLowerCase()} data available.</div> : <>
         <div className="chart" aria-label={`${title} chart`} role="img">
           <ResponsiveContainer width="100%" height="100%">
             {type === "area" ? (
               <AreaChart data={data as object[]}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="period" />
+                <XAxis dataKey={axis} />
                 <YAxis />
                 <Tooltip />
-                <Area dataKey="total" stroke="#08775d" fill="#b9eadc" />
+                {series.map((key, i) => <Area key={key} dataKey={key} stroke={colors[i]} fill={colors[i]} fillOpacity={0.15} />)}
               </AreaChart>
             ) : (
               <BarChart data={data as object[]}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="period" />
+                <XAxis dataKey={axis} />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="total" fill="#08775d" />
+                {series.map((key, i) => <Bar key={key} dataKey={key} fill={colors[i]} />)}
               </BarChart>
             )}
           </ResponsiveContainer>
         </div>
+        <details><summary>View {title.toLowerCase()} data</summary><div className="table-wrap"><table aria-label={`${title} data`}>
+          <thead><tr><th scope="col">{kind === "institutions" ? "Institution" : "Period"}</th>{series.map(key => <th scope="col" key={key}>{key.replaceAll("_", " ")}</th>)}</tr></thead>
+          <tbody>{data.map((row, index) => <tr key={index}><th scope="row">{String(row[axis])}</th>{series.map(key => <td key={key}>{String(row[key] ?? "?")}</td>)}</tr>)}</tbody>
+        </table></div></details></>}
       </State>
     </Card>
   );
