@@ -74,7 +74,13 @@ services:
       BLOCKCHAIN_RPC_URL: http://blockchain:8545
       BLOCKCHAIN_CHAIN_ID: 31337
       CONTRACT_ADDRESS: ${CONTRACT_ADDRESS:-}
-      IPFS_ENABLED: "false"
+      IPFS_ENABLED: ${IPFS_ENABLED:-false}
+      IPFS_PROVIDER: ${IPFS_PROVIDER:-pinata}
+      IPFS_PROVIDER_API_URL: ${IPFS_PROVIDER_API_URL:-https://api.pinata.cloud}
+      PINATA_JWT: ${PINATA_JWT:-}
+      PINATA_GATEWAY: ${PINATA_GATEWAY:-https://gateway.pinata.cloud/ipfs}
+      IPFS_UPLOAD_TIMEOUT_MS: ${IPFS_UPLOAD_TIMEOUT_MS:-60000}
+      IPFS_MAX_RETRIES: ${IPFS_MAX_RETRIES:-3}
       ENABLE_METRICS: "false"
       ENABLE_SWAGGER: "true"
     depends_on:
