@@ -1,6 +1,5 @@
-const fs = require("fs");
 const path = require("path");
-const { isAddress } = require("ethers");
+const { resolveContractAddress, validateResolvedContract } = require("../backend/config/blockchain");
 
 class StartupDependencyError extends Error {
   constructor(message, code) { super(message); this.name = "StartupDependencyError"; this.code = code; this.dependency = "blockchain"; }
@@ -28,22 +27,18 @@ const rpc = async (url, method, params = [], { fetchImpl = fetch, timeoutMs = Nu
 };
 
 const loadActiveLocalDeployment = async ({ deploymentPath, rpcUrl, expectedChainId }) => {
-  if (!fs.existsSync(deploymentPath)) throw new Error("Local blockchain deployment metadata is missing.");
-  const deployment = JSON.parse(fs.readFileSync(deploymentPath, "utf8"));
-  if (Number(deployment.chainId) !== Number(expectedChainId)) throw new Error("Local blockchain deployment metadata has the wrong chain ID.");
-  if (!isAddress(deployment.contractAddress || "")) throw new Error("Local blockchain deployment metadata has an invalid address.");
-  const runtimeChainId = Number(BigInt(await rpc(rpcUrl, "eth_chainId")));
-  if (runtimeChainId !== Number(expectedChainId)) throw new Error("Local blockchain runtime has the wrong chain ID.");
-  const bytecode = await rpc(rpcUrl, "eth_getCode", [deployment.contractAddress, "latest"]);
-  if (bytecode === "0x") throw new Error("Local blockchain contract is missing from the active chain.");
-  return deployment;
+  const contractAddress = resolveContractAddress({ network: "localhost", chainId: expectedChainId, deploymentPath });
+  await validateResolvedContract({ contractAddress, chainId: expectedChainId }, {
+    getNetwork: async () => ({ chainId: BigInt(await rpc(rpcUrl, "eth_chainId")) }),
+    getCode: address => rpc(rpcUrl, "eth_getCode", [address, "latest"]),
+  });
+  return { network: "localhost", chainId: Number(expectedChainId), contractAddress };
 };
 
 const start = async () => {
   if (process.env.BLOCKCHAIN_ENABLED === "true" && process.env.BLOCKCHAIN_NETWORK === "localhost") {
     const deploymentPath = process.env.LOCAL_DEPLOYMENT_PATH || path.resolve("deployments/localhost/CredentialRegistry.json");
     const deployment = await loadActiveLocalDeployment({ deploymentPath, rpcUrl: process.env.BLOCKCHAIN_RPC_URL, expectedChainId: process.env.BLOCKCHAIN_CHAIN_ID });
-    process.env.CONTRACT_ADDRESS = deployment.contractAddress;
     console.log(JSON.stringify({ event: "local_blockchain_deployment_verified", chainId: Number(deployment.chainId), contractAddress: deployment.contractAddress }));
   }
   require("../backend/server").startServer();

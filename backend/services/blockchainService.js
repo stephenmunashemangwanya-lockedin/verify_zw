@@ -1,14 +1,14 @@
 const {
   Contract,
   JsonRpcProvider,
-  Wallet,
   getAddress,
   isAddress,
   isHexString,
 } = require("ethers");
 
 const registryAbi = require("../blockchain/CredentialRegistry.abi.json");
-const { getBlockchainConfig } = require("../config/blockchain");
+const { getBlockchainConfig, validateResolvedContract } = require("../config/blockchain");
+const { resolveBlockchainSigner } = require("../config/blockchainSigner");
 
 class BlockchainServiceError extends Error {
   constructor(message, { code = "BLOCKCHAIN_ERROR", statusCode = 502, retryable = false, transactionHash = null } = {}) {
@@ -74,16 +74,18 @@ const getProvider = () => {
   return new JsonRpcProvider(config.rpcUrl);
 };
 
-const getSigner = () => {
+const getSigner = async () => {
   const config = getBlockchainConfig({ requireSigner: true });
-  return new Wallet(config.privateKey, new JsonRpcProvider(config.rpcUrl));
+  const provider = new JsonRpcProvider(config.rpcUrl);
+  await validateResolvedContract(config, provider);
+  return resolveBlockchainSigner(config, provider);
 };
 
-const getCredentialRegistryContract = ({ readOnly = false } = {}) => {
+const getCredentialRegistryContract = async ({ readOnly = false } = {}) => {
   const config = getBlockchainConfig({ requireSigner: !readOnly });
-  const runner = readOnly
-    ? new JsonRpcProvider(config.rpcUrl)
-    : new Wallet(config.privateKey, new JsonRpcProvider(config.rpcUrl));
+  const provider = new JsonRpcProvider(config.rpcUrl);
+  await validateResolvedContract(config, provider);
+  const runner = readOnly ? provider : await resolveBlockchainSigner(config, provider);
   return new Contract(config.contractAddress, registryAbi, runner);
 };
 
@@ -110,19 +112,12 @@ const validateExpectedNetwork = async () => {
 
 const validateBlockchainConnection = async () => {
   const config = getBlockchainConfig({ requireSigner: false });
-  const network = await validateExpectedNetwork();
-  const bytecode = await getProvider().getCode(config.contractAddress);
-  if (bytecode === "0x") {
-    throw new BlockchainServiceError("Credential registry is not deployed at the configured address.", {
-      code: "BLOCKCHAIN_CONTRACT_NOT_FOUND",
-      statusCode: 503,
-    });
-  }
-  return { ...network, contractAddress: config.contractAddress, connected: true };
+  await validateResolvedContract(config, new JsonRpcProvider(config.rpcUrl));
+  return { network: config.network, chainId: config.chainId, contractAddress: config.contractAddress, connected: true };
 };
 
 const checkContractPaused = async () => withReadRetries(
-  () => getCredentialRegistryContract({ readOnly: true }).paused()
+  async () => (await getCredentialRegistryContract({ readOnly: true })).paused()
 );
 
 const isInstitutionAuthorised = async (walletAddress) => {
@@ -130,7 +125,7 @@ const isInstitutionAuthorised = async (walletAddress) => {
     throw new BlockchainServiceError("Institution wallet is invalid.", { code: "INVALID_WALLET", statusCode: 400 });
   }
   return withReadRetries(
-    () => getCredentialRegistryContract({ readOnly: true }).isAuthorisedInstitution(getAddress(walletAddress))
+    async () => (await getCredentialRegistryContract({ readOnly: true })).isAuthorisedInstitution(getAddress(walletAddress))
   );
 };
 
@@ -152,7 +147,7 @@ const waitForSuccessfulTransaction = async (transaction, config) => {
 
 const transactionResult = async (transaction, receipt) => {
   const config = getBlockchainConfig({ requireSigner: true });
-  const signer = getSigner();
+  const signer = await getSigner();
   return {
     transactionHash: transaction.hash,
     blockNumber: receipt.blockNumber,
@@ -170,7 +165,7 @@ const authoriseInstitution = async (walletAddress) => {
   if (!isAddress(walletAddress || "")) throw new BlockchainServiceError("Institution wallet is invalid.", { code: "INVALID_WALLET", statusCode: 400 });
   if (await isInstitutionAuthorised(walletAddress)) return { alreadyAuthorised: true, walletAddress: getAddress(walletAddress) };
   const config = getBlockchainConfig({ requireSigner: true });
-  const transaction = await getCredentialRegistryContract().authoriseInstitution(getAddress(walletAddress));
+  const transaction = await (await getCredentialRegistryContract()).authoriseInstitution(getAddress(walletAddress));
   const receipt = await waitForSuccessfulTransaction(transaction, config);
   return { ...(await transactionResult(transaction, receipt)), walletAddress: getAddress(walletAddress), alreadyAuthorised: false };
 };
@@ -179,7 +174,7 @@ const deactivateInstitution = async (walletAddress) => {
   if (!isAddress(walletAddress || "")) throw new BlockchainServiceError("Institution wallet is invalid.", { code: "INVALID_WALLET", statusCode: 400 });
   if (!(await isInstitutionAuthorised(walletAddress))) return { alreadyDeactivated: true, walletAddress: getAddress(walletAddress) };
   const config = getBlockchainConfig({ requireSigner: true });
-  const transaction = await getCredentialRegistryContract().deactivateInstitution(getAddress(walletAddress));
+  const transaction = await (await getCredentialRegistryContract()).deactivateInstitution(getAddress(walletAddress));
   const receipt = await waitForSuccessfulTransaction(transaction, config);
   return { ...(await transactionResult(transaction, receipt)), walletAddress: getAddress(walletAddress), alreadyDeactivated: false };
 };
@@ -187,7 +182,7 @@ const deactivateInstitution = async (walletAddress) => {
 const verifyCredentialOnChain = async (certificateHash) => {
   const bytes32Hash = convertSha256HashToBytes32(certificateHash);
   const result = await withReadRetries(
-    () => getCredentialRegistryContract({ readOnly: true }).verifyCredential(bytes32Hash)
+    async () => (await getCredentialRegistryContract({ readOnly: true })).verifyCredential(bytes32Hash)
   );
   return {
     exists: result.exists,
@@ -202,7 +197,7 @@ const issueCredentialOnChainInternal = async (certificateHash, { expectedInstitu
   const bytes32Hash = convertSha256HashToBytes32(certificateHash);
   await validateExpectedNetwork();
   if (await checkContractPaused()) throw new BlockchainServiceError("Credential registry is paused.", { code: "BLOCKCHAIN_PAUSED", statusCode: 503 });
-  const signerAddress = await getSigner().getAddress();
+  const signerAddress = await (await getSigner()).getAddress();
   if (expectedInstitutionWallet) {
     if (!isAddress(expectedInstitutionWallet) || getAddress(expectedInstitutionWallet) !== signerAddress) {
       throw new BlockchainServiceError("Configured issuer does not match the institution wallet.", {
@@ -218,7 +213,7 @@ const issueCredentialOnChainInternal = async (certificateHash, { expectedInstitu
   if (existing.exists) throw new BlockchainServiceError("Credential hash already exists on-chain.", { code: "BLOCKCHAIN_DUPLICATE_CREDENTIAL", statusCode: 409 });
 
   const config = getBlockchainConfig({ requireSigner: true });
-  const transaction = await getCredentialRegistryContract().issueCredential(bytes32Hash);
+  const transaction = await (await getCredentialRegistryContract()).issueCredential(bytes32Hash);
   if (onSubmitted) {
     await Promise.resolve(onSubmitted({ transactionHash: transaction.hash })).catch((error) => {
       console.error("Blockchain submission audit failed:", error.message);
@@ -260,7 +255,7 @@ const issueCredentialOnChain = async (certificateHash, options = {}) => {
 };
 
 const findCredentialIssuanceEvent = async (certificateHash) => {
-  const contract = getCredentialRegistryContract({ readOnly: true });
+  const contract = await getCredentialRegistryContract({ readOnly: true });
   const events = await contract.queryFilter(
     contract.filters.CredentialIssued(convertSha256HashToBytes32(certificateHash)),
     0,
@@ -285,7 +280,7 @@ const revokeCredentialOnChain = async (certificateHash, { onSubmitted } = {}) =>
     if (proof.revoked) throw new BlockchainServiceError("Credential proof is already revoked.", { code: "BLOCKCHAIN_CREDENTIAL_ALREADY_REVOKED", statusCode: 409 });
 
     const config = getBlockchainConfig({ requireSigner: true });
-    const transaction = await getCredentialRegistryContract().revokeCredential(convertSha256HashToBytes32(certificateHash));
+    const transaction = await (await getCredentialRegistryContract()).revokeCredential(convertSha256HashToBytes32(certificateHash));
     if (onSubmitted) {
       await Promise.resolve(onSubmitted({ transactionHash: transaction.hash })).catch((error) => {
         console.error("Blockchain revocation submission audit failed:", error.message);

@@ -81,7 +81,7 @@ const prepareIsolatedLocalDeployment = async () => {
   process.env.BLOCKCHAIN_CHAIN_ID = "1";
   await assert.rejects(() => validateExpectedNetwork(), { code: "BLOCKCHAIN_WRONG_NETWORK" });
   process.env.BLOCKCHAIN_CHAIN_ID = expectedChainId;
-  const signerAddress = await getSigner().getAddress();
+  const signerAddress = await (await getSigner()).getAddress();
   const authorisation = await authoriseInstitution(signerAddress);
   const certificateHash = "4f7e7a946f8e9f1a61a4e23d7c8af82cbd02f70d21ed83c8e0e7c844c3c7c951";
   const existing = await verifyCredentialOnChain(certificateHash);

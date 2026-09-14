@@ -1,4 +1,4 @@
-const { isAddress, isHexString } = require("ethers");
+const { isHexString } = require("ethers");
 
 class EnvironmentConfigurationError extends Error {
   constructor(issues) {
@@ -87,7 +87,8 @@ const validateEnvironment = ({ strict = process.env.NODE_ENV === "production" } 
       ? ["localhost", "127.0.0.1", "blockchain"]
       : ["localhost", "127.0.0.1"];
     if (!url(process.env.BLOCKCHAIN_RPC_URL || "", { localHttp: true, localHttpHosts: rpcHosts })) issues.push("BLOCKCHAIN_RPC_URL is invalid");
-    if (!isAddress(process.env.CONTRACT_ADDRESS || "")) issues.push("CONTRACT_ADDRESS is invalid");
+    try { require("./blockchain").resolveContractAddress({ network: (process.env.BLOCKCHAIN_NETWORK || "").toLowerCase(), chainId: Number(process.env.BLOCKCHAIN_CHAIN_ID) }); }
+    catch { issues.push("CONTRACT_ADDRESS is invalid"); }
     if (!isHexString(process.env.DEPLOYER_PRIVATE_KEY || "", 32)) issues.push("DEPLOYER_PRIVATE_KEY is invalid");
   }
   if (strict) {
@@ -99,7 +100,7 @@ const validateEnvironment = ({ strict = process.env.NODE_ENV === "production" } 
     if (process.env.BLOCKCHAIN_ENABLED !== "true") issues.push("BLOCKCHAIN_ENABLED must be true in staging/production");
     if (["localhost", "hardhat"].includes(String(process.env.BLOCKCHAIN_NETWORK || "").toLowerCase()) || Number(process.env.BLOCKCHAIN_CHAIN_ID) === 31337) issues.push("local Hardhat blockchain is forbidden in staging/production");
     if (/localhost|127\.0\.0\.1|blockchain:8545/i.test(process.env.BLOCKCHAIN_RPC_URL || "")) issues.push("local blockchain RPC is forbidden in staging/production");
-    if ((process.env.CONTRACT_ADDRESS || "").toLowerCase() === "0x0000000000000000000000000000000000000000") issues.push("placeholder contract address is forbidden");
+
     const knownHardhatKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
     if ((process.env.DEPLOYER_PRIVATE_KEY || "").toLowerCase() === knownHardhatKey) issues.push("default Hardhat private keys are forbidden");
     if (staging && (Number(process.env.BLOCKCHAIN_CHAIN_ID) === 1 || /mainnet/i.test(process.env.BLOCKCHAIN_NETWORK || ""))) issues.push("production blockchain is forbidden in staging");

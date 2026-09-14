@@ -1,6 +1,6 @@
 const pool = require("../config/database");
 const { getIpfsConfig } = require("../config/ipfs");
-const { getBlockchainConfig } = require("../config/blockchain");
+const { getBlockchainConfig, validateResolvedContract } = require("../config/blockchain");
 const fs = require("fs");
 const path = require("path");
 const { sendAlert } = require("./alertService");
@@ -29,14 +29,14 @@ const blockchainHealth = async (dependencies = {}) => {
   try {
     const { JsonRpcProvider, Contract, ZeroHash } = require("ethers");
     const provider = dependencies.provider || new JsonRpcProvider(config.rpcUrl);
-    const network = await timeout(provider.getNetwork(), Number(process.env.READINESS_TIMEOUT_MS || 2000));
-    if (Number(network.chainId) !== config.chainId) return { status: "wrong_chain", network: config.network, chainId: config.chainId };
-    const bytecode = await timeout(provider.getCode(config.contractAddress), Number(process.env.READINESS_TIMEOUT_MS || 2000));
-    if (bytecode === "0x") return { status: "contract_missing", network: config.network, chainId: config.chainId };
+    await validateResolvedContract(config, {
+      getNetwork: () => timeout(provider.getNetwork(), Number(process.env.READINESS_TIMEOUT_MS || 2000)),
+      getCode: address => timeout(provider.getCode(address), Number(process.env.READINESS_TIMEOUT_MS || 2000)),
+    });
     const contract = dependencies.contract || new Contract(config.contractAddress, registryAbi, provider);
     await timeout(contract.credentialExists(ZeroHash), Number(process.env.READINESS_TIMEOUT_MS || 2000));
     return { status: "healthy", network: config.network, chainId: config.chainId };
-  } catch { return { status: "unavailable", network: config.network, chainId: config.chainId }; }
+  } catch (error) { return { status: error.reason || "unavailable", network: config.network, chainId: config.chainId }; }
 };
 const filesystemHealth = async () => { try { await timeout(fs.promises.access(path.resolve("backend")), Number(process.env.READINESS_TIMEOUT_MS || 2000)); return { status: "healthy" }; } catch { return { status: "unavailable" }; } };
 const readinessHealth = async () => { const [database, filesystem, ipfs, blockchain] = await Promise.all([databaseHealth(), filesystemHealth(), ipfsHealth(), blockchainHealth()]); const states = [database.status, filesystem.status, ipfs.status, blockchain.status]; const failed = states.some((status) => !["healthy", "not_configured"].includes(status)); return { status: failed ? "unavailable" : "healthy", checks: { database, filesystem, ipfs, blockchain } }; };
