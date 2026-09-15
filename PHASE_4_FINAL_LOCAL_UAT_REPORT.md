@@ -4,7 +4,7 @@
 
 Completed business UAT on 2026-09-14; closure on branch `feature/certificate-security`. Baseline commit: `0f65d205f78dae3f3d083bbe7e98646a79107cf2`. Phases 1-3 were not restarted. One existing institution was reused. No duplicate institution, additional credential, re-anchoring, or volume deletion occurred.
 
-The business lifecycle passed. Final closure remains unsuccessful because the required default frontend regression command fails a timing gate and the additional final database snapshot is blocked by a Docker daemon API error. These are distinct from the proven blockchain runtime remediation.
+The business lifecycle passed. Phase 5 operator acceptance classifies Phase 4 as LOCAL UAT PASSED WITH NON-BLOCKING FINDINGS. The frontend timing failure, Docker daemon API error affecting an additional snapshot, and ephemeral local Hardhat chain are carried forward. The recorded test and persistence evidence below is unchanged.
 
 ## Authentication
 
@@ -186,6 +186,6 @@ Staging requires a persistent approved external EVM network; hosted staging Post
 
 ## Final Verdict
 
-LOCAL UAT FAILED
+LOCAL UAT PASSED WITH NON-BLOCKING FINDINGS
 
-The business lifecycle and PostgreSQL persistence passed. The required default frontend regression remains failing, and the additional final database query is environment-blocked. The successful one-worker run is diagnostic evidence, not an unconditional replacement of the required gate.
+Classification updated under the explicit Phase 5 instruction. Business lifecycle and PostgreSQL persistence passed. Carry-forward findings: default parallel frontend test timing failures (the same suite passes 91/91 with one worker), local Docker daemon API 500 blocking an additional snapshot, and ephemeral Hardhat chain state. No deterministic application defect was proven by the timing failure; no underlying evidence has been rewritten.
