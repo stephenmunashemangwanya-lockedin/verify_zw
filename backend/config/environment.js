@@ -1,4 +1,5 @@
 const { isHexString } = require("ethers");
+const { validRedisConfiguration } = require("./redis");
 
 class EnvironmentConfigurationError extends Error {
   constructor(issues) {
@@ -105,9 +106,7 @@ const validateEnvironment = ({ strict = process.env.NODE_ENV === "production" } 
     if ((process.env.DEPLOYER_PRIVATE_KEY || "").toLowerCase() === knownHardhatKey) issues.push("default Hardhat private keys are forbidden");
     if (staging && (Number(process.env.BLOCKCHAIN_CHAIN_ID) === 1 || /mainnet/i.test(process.env.BLOCKCHAIN_NETWORK || ""))) issues.push("production blockchain is forbidden in staging");
     if (process.env.IPFS_ENABLED !== "true") issues.push("IPFS_ENABLED must be true in staging/production");
-    let secureRedis = false;
-    try { secureRedis = new URL(process.env.REDIS_URL || "").protocol === "rediss:"; } catch {}
-    if (process.env.RATE_LIMIT_STORE !== "redis" || !secureRedis) issues.push("a secure Redis rate-limit store is required in staging/production");
+    if (process.env.RATE_LIMIT_STORE !== "redis" || !validRedisConfiguration()) issues.push("a secure Redis rate-limit store is required in staging/production (TLS or explicitly configured staging Render private connection)");
   }
   if (issues.length) throw new EnvironmentConfigurationError(issues);
   return Object.freeze({
