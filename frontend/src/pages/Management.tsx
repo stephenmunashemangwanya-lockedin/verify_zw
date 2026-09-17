@@ -25,6 +25,10 @@ export function ManagementPage({ kind }: { kind: Kind }) {
   return <ManagementList key={kind} kind={kind} />;
 }
 function ManagementList({ kind }: { kind: Kind }) {
+    const { user } = useAuth();
+  const [blockchainMessage, setBlockchainMessage] = useState("");
+  const [blockchainError, setBlockchainError] = useState("");
+  const [pendingInstitutionId, setPendingInstitutionId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
@@ -46,8 +50,75 @@ function ManagementList({ kind }: { kind: Kind }) {
       return r.data;
     },
   });
+    const authoriseInstitution = useMutation({
+    mutationFn: async (institutionId: string) =>
+      api.post(`/institutions/${institutionId}/blockchain/authorise`),
+
+    onMutate: (institutionId) => {
+      setPendingInstitutionId(institutionId);
+      setBlockchainMessage("");
+      setBlockchainError("");
+    },
+
+    onSuccess: (response) => {
+      setBlockchainMessage(
+        response.data.message ||
+          "Institution blockchain wallet authorised successfully."
+      );
+      void q.refetch();
+    },
+
+    onError: (value: { message?: string }) => {
+      setBlockchainError(
+        value.message || "Institution blockchain authorisation failed."
+      );
+    },
+
+    onSettled: () => {
+      setPendingInstitutionId(null);
+    },
+  });
   const rows = (q.data?.[responseKey[kind]] || []) as JsonRecord[];
-  const columns = useMemo(() => columnsFor(kind), [kind]);
+  const baseColumns = useMemo(() => columnsFor(kind), [kind]);
+
+  const columns: Column<JsonRecord>[] =
+    kind === "institutions" && user?.role === "super_admin"
+      ? [
+          ...baseColumns,
+          {
+            key: "blockchain",
+            label: "Blockchain",
+            render: (record) => {
+              const institutionId = String(record.id);
+
+              return (
+                <Button
+                  disabled={
+                    authoriseInstitution.isPending &&
+                    pendingInstitutionId === institutionId
+                  }
+                  onClick={() => {
+                    const confirmed = window.confirm(
+                      `Authorise ${String(
+                        record.name
+                      )} to issue credentials on Sepolia?`
+                    );
+
+                    if (confirmed) {
+                      authoriseInstitution.mutate(institutionId);
+                    }
+                  }}
+                >
+                  {authoriseInstitution.isPending &&
+                  pendingInstitutionId === institutionId
+                    ? "Authorising..."
+                    : "Authorise on blockchain"}
+                </Button>
+              );
+            },
+          },
+        ]
+      : baseColumns;
   return (
     <div className="page">
       <div className="page-head">
@@ -82,6 +153,17 @@ function ManagementList({ kind }: { kind: Kind }) {
             </select>
           </label>}
         </div>
+        {blockchainError && (
+  <div className="notice error" role="alert">
+    {blockchainError}
+  </div>
+)}
+
+{blockchainMessage && (
+  <div className="notice success">
+    {blockchainMessage}
+  </div>
+)}
         <DataTable
           rows={rows}
           columns={columns}
