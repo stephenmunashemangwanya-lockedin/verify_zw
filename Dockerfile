@@ -20,7 +20,7 @@ COPY --from=dependencies --chown=node:node /app/node_modules ./node_modules
 RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 COPY --chown=node:node package.json ./
 COPY --chown=node:node backend ./backend
-COPY --chown=node:node scripts/startDockerBackend.js ./scripts/startDockerBackend.js
+COPY --chown=node:node scripts/startDockerBackend.js scripts/startRenderBackend.js ./scripts/
 COPY --chown=node:node docs/openapi.yaml ./docs/openapi.yaml
 RUN mkdir -p /app/output/pdf /app/generated/qr /app/logs /app/backend/uploads/certificates-temp && chown -R node:node /app/output /app/generated /app/logs /app/backend/uploads
 USER node
