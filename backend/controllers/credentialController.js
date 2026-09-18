@@ -472,60 +472,207 @@ const getOneCredential = async (req, res) => {
 
 const revokeCredential = async (req, res) => {
   const credentialId = req.params.id;
-  const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
-  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  if (!uuidPattern.test(credentialId)) return res.status(400).json({ success: false, message: "Credential ID is invalid." });
-  if (reason.length < 5 || reason.length > 1000) return res.status(400).json({ success: false, message: "A revocation reason between 5 and 1000 characters is required." });
+  const reason =
+    typeof req.body?.reason === "string"
+      ? req.body.reason.trim()
+      : "";
+
+  const uuidPattern =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+  if (!uuidPattern.test(credentialId)) {
+    return res.status(400).json({
+      success: false,
+      message: "Credential ID is invalid.",
+    });
+  }
+
+  if (reason.length < 5 || reason.length > 1000) {
+    return res.status(400).json({
+      success: false,
+      message:
+        "A revocation reason between 5 and 1000 characters is required.",
+    });
+  }
 
   let credential;
   let blockchainResult;
-  try {
-    credential = await getCredentialById(credentialId);
-    if (!credential) return res.status(404).json({ success: false, message: "Credential not found." });
-    if (req.user.role !== "super_admin" && req.user.institutionId !== credential.institution_id) {
-      return res.status(403).json({ success: false, message: "You cannot revoke credentials from another institution." });
-    }
-    if (credential.status === "revoked") return res.status(409).json({ success: false, message: "Credential is already revoked." });
-    if (credential.status !== "active") return res.status(409).json({ success: false, message: "Only active credentials can be revoked." });
 
-    blockchainResult = await revokeCredentialOnChain(credential.certificate_hash, {
-      onSubmitted: ({ transactionHash }) => createAuditLog({
-        ...requestAuditContext(req), action: "credential_revocation_submitted",
-        entityType: "credential", entityId: credential.id, details: { transactionHash },
-      }),
-    });
-    const revokedCredential = await markCredentialRevoked(credential.id, {
-      revokedBy: req.user.userId, reason, transactionHash: blockchainResult.transactionHash,
-    });
+  try {
+    credential = await getCredentialById(
+      credentialId
+    );
+
+    if (!credential) {
+      return res.status(404).json({
+        success: false,
+        message: "Credential not found.",
+      });
+    }
+
+    if (
+      req.user.role !== "super_admin" &&
+      req.user.institutionId !==
+        credential.institution_id
+    ) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "You cannot revoke credentials from another institution.",
+      });
+    }
+
+    if (credential.status === "revoked") {
+      return res.status(409).json({
+        success: false,
+        message:
+          "Credential is already revoked.",
+      });
+    }
+
+    if (credential.status !== "active") {
+      return res.status(409).json({
+        success: false,
+        message:
+          "Only active credentials can be revoked.",
+      });
+    }
+
+    const institution =
+      await getInstitutionById(
+        credential.institution_id
+      );
+
+    if (!institution) {
+      return res.status(404).json({
+        success: false,
+        message: "Institution not found.",
+      });
+    }
+
+    if (!institution.status) {
+      return res.status(422).json({
+        success: false,
+        message:
+          "Credentials cannot be revoked by an inactive institution.",
+      });
+    }
+
+    blockchainResult =
+      await revokeCredentialOnChain(
+        credential.certificate_hash,
+        {
+          expectedInstitutionWallet:
+            institution.wallet_address,
+
+          onSubmitted: ({
+            transactionHash,
+          }) =>
+            createAuditLog({
+              ...requestAuditContext(req),
+              institutionId:
+                credential.institution_id,
+              action:
+                "credential_revocation_submitted",
+              entityType: "credential",
+              entityId: credential.id,
+              details: {
+                transactionHash,
+              },
+            }),
+        }
+      );
+
+    const revokedCredential =
+      await markCredentialRevoked(
+        credential.id,
+        {
+          revokedBy: req.user.userId,
+          reason,
+          transactionHash:
+            blockchainResult.transactionHash,
+        }
+      );
+
     if (!revokedCredential) {
-      const recoveryError = new Error("Confirmed revocation requires database reconciliation.");
-      recoveryError.code = "BLOCKCHAIN_REVOCATION_RECONCILIATION_REQUIRED";
+      const recoveryError = new Error(
+        "Confirmed revocation requires database reconciliation."
+      );
+
+      recoveryError.code =
+        "BLOCKCHAIN_REVOCATION_RECONCILIATION_REQUIRED";
+
       recoveryError.statusCode = 500;
+
       throw recoveryError;
     }
-    await createAuditLog({
-      ...requestAuditContext(req), institutionId: credential.institution_id, action: "CREDENTIAL_REVOKED", entityType: "credential",
-      entityId: credential.id, details: { transactionHash: blockchainResult.transactionHash, reason },
-    });
-    return res.status(200).json({ success: true, message: "Credential revoked successfully with confirmed blockchain proof.", credential: revokedCredential, blockchain: blockchainResult });
-  } catch (error) {
-    const reconciliationRequired = Boolean(blockchainResult?.confirmed) || error.code === "BLOCKCHAIN_REVOCATION_RECONCILIATION_REQUIRED";
+
     await createAuditLog({
       ...requestAuditContext(req),
-      action: reconciliationRequired ? "credential_revocation_reconciliation_required" : "credential_revocation_failed",
-      entityType: "credential", entityId: credential?.id || null,
-      details: { errorCode: error.code || "CREDENTIAL_REVOCATION_FAILED", transactionHash: blockchainResult?.transactionHash || error.transactionHash || null },
-    }).catch((auditError) => console.error("Revocation audit failed:", auditError.message));
-    return res.status(error.statusCode || 500).json({
-      success: false,
-      message: reconciliationRequired
-        ? "Blockchain revocation was confirmed but database reconciliation is required."
-        : error.statusCode === 503
-          ? "The blockchain network is temporarily unavailable; the credential remains active."
-          : error.statusCode === 409
-            ? "The on-chain credential cannot be revoked in its current state."
-            : "Failed to revoke credential; the database record remains unchanged.",
+      institutionId:
+        credential.institution_id,
+      action: "CREDENTIAL_REVOKED",
+      entityType: "credential",
+      entityId: credential.id,
+      details: {
+        transactionHash:
+          blockchainResult.transactionHash,
+        reason,
+      },
     });
+
+    return res.status(200).json({
+      success: true,
+      message:
+        "Credential revoked successfully with confirmed blockchain proof.",
+      credential: revokedCredential,
+      blockchain: blockchainResult,
+    });
+  } catch (error) {
+    const reconciliationRequired =
+      Boolean(blockchainResult?.confirmed) ||
+      error.code ===
+        "BLOCKCHAIN_REVOCATION_RECONCILIATION_REQUIRED";
+
+    await createAuditLog({
+      ...requestAuditContext(req),
+      institutionId:
+        credential?.institution_id || null,
+      action: reconciliationRequired
+        ? "credential_revocation_reconciliation_required"
+        : "credential_revocation_failed",
+      entityType: "credential",
+      entityId: credential?.id || null,
+      details: {
+        errorCode:
+          error.code ||
+          "CREDENTIAL_REVOCATION_FAILED",
+        transactionHash:
+          blockchainResult?.transactionHash ||
+          error.transactionHash ||
+          null,
+      },
+    }).catch((auditError) =>
+      console.error(
+        "Revocation audit failed:",
+        auditError.message
+      )
+    );
+
+    return res
+      .status(error.statusCode || 500)
+      .json({
+        success: false,
+        message: reconciliationRequired
+          ? "Blockchain revocation was confirmed but database reconciliation is required."
+          : error.statusCode === 503
+            ? "The blockchain network is temporarily unavailable; the credential remains active."
+            : error.statusCode === 409
+              ? "The on-chain credential cannot be revoked in its current state."
+              : error.statusCode === 403
+                ? "The configured institution wallet cannot revoke this credential."
+                : "Failed to revoke credential; the database record remains unchanged.",
+      });
   }
 };
 

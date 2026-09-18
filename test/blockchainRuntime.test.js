@@ -91,51 +91,443 @@ test("authorization, issuance, revocation and reads share metadata resolution", 
   const ethersPath = require.resolve("ethers");
   const actualEthers = require(ethersPath);
   const servicePath = require.resolve("../backend/services/blockchainService");
+  const signerPath = require.resolve("../backend/config/blockchainSigner");
+
   const existingService = require.cache[servicePath];
+  const existingSignerModule = require.cache[signerPath];
+
   const calls = [];
+
+  let authorised = false;
   let exists = false;
-  const transaction = { hash: "0x" + "a".repeat(64), wait: async () => ({ status: 1, blockNumber: 1 }) };
-  class Provider { async listAccounts() { return [{ getAddress: async () => address }]; } async getSigner(value) { calls.push(["rpcSigner", value]); return new Signer(); } async getNetwork() { return { chainId: 31337n }; } async getCode(value) { calls.push(["bytecode", value]); return "0x6000"; } }
-  class Signer { async getAddress() { return address; } }
-  class Registry {
-    constructor(value) { calls.push(["contract", value]); }
-    async DEFAULT_ADMIN_ROLE() { return "0x" + "0".repeat(64); }
-    async hasRole() { return true; }
-    async paused() { return false; }
-    async isAuthorisedInstitution() { return true; }
-    async authoriseInstitution() { calls.push(["authorise", address]); return transaction; }
-    async verifyCredential() { return { exists, revoked: false, issuer: address, issuedAt: 1n, revokedAt: 0n }; }
-    async issueCredential() { calls.push(["issue", address]); return transaction; }
-    async revokeCredential() { calls.push(["revoke", address]); return transaction; }
+  let revoked = false;
+  let credentialIssuer = null;
+  let adminRoleAvailable = true;
+
+  const makeTransaction = (from) => ({
+    hash: "0x" + "a".repeat(64),
+    from,
+    wait: async () => ({
+      status: 1,
+      blockNumber: 1,
+    }),
+  });
+
+  class Signer {
+    constructor(value = address) {
+      this.address = actualEthers.isAddress(value)
+        ? actualEthers.getAddress(value)
+        : address;
+    }
+
+    async getAddress() {
+      return this.address;
+    }
   }
-  require.cache[ethersPath].exports = { ...actualEthers, JsonRpcProvider: Provider, Wallet: Signer, Contract: Registry };
+
+  class Provider {
+    async listAccounts() {
+      return [
+        {
+          getAddress: async () => address,
+        },
+        {
+          getAddress: async () => otherAddress,
+        },
+      ];
+    }
+
+    async getSigner(value) {
+      calls.push(["rpcSigner", value]);
+      return new Signer(value);
+    }
+
+    async getNetwork() {
+      return {
+        chainId: 31337n,
+      };
+    }
+
+    async getCode(value) {
+      calls.push(["bytecode", value]);
+      return "0x6000";
+    }
+  }
+
+  class Registry {
+    constructor(contractAddress, _abi, runner) {
+      calls.push(["contract", contractAddress]);
+      this.runner = runner;
+    }
+
+    async DEFAULT_ADMIN_ROLE() {
+      return "0x" + "0".repeat(64);
+    }
+
+    async hasRole(_role, candidate) {
+      return (
+        adminRoleAvailable &&
+        candidate === address
+      );
+    }
+
+    async paused() {
+      return false;
+    }
+
+    async isAuthorisedInstitution(wallet) {
+      return (
+        authorised &&
+        wallet === otherAddress
+      );
+    }
+
+    async authoriseInstitution(wallet) {
+      calls.push([
+        "authorise",
+        wallet,
+      ]);
+
+      authorised = true;
+
+      const from =
+        await this.runner.getAddress();
+
+      return makeTransaction(from);
+    }
+
+    async verifyCredential() {
+      return {
+        exists,
+        revoked,
+        issuer:
+          credentialIssuer ||
+          otherAddress,
+        issuedAt: exists ? 1n : 0n,
+        revokedAt: revoked
+          ? 2n
+          : 0n,
+      };
+    }
+
+    async issueCredential() {
+      const from =
+        await this.runner.getAddress();
+
+      calls.push([
+        "issue",
+        from,
+      ]);
+
+      exists = true;
+      revoked = false;
+      credentialIssuer = from;
+
+      return makeTransaction(from);
+    }
+
+    async revokeCredential() {
+      const from =
+        await this.runner.getAddress();
+
+      calls.push([
+        "revoke",
+        from,
+      ]);
+
+      revoked = true;
+
+      return makeTransaction(from);
+    }
+  }
+
+  require.cache[ethersPath].exports = {
+    ...actualEthers,
+    JsonRpcProvider: Provider,
+    Wallet: Signer,
+    Contract: Registry,
+  };
+
   delete require.cache[servicePath];
+  delete require.cache[signerPath];
+
   try {
-    const service = require(servicePath);
-    Registry.prototype.isAuthorisedInstitution = async () => false;
+    const service = require(
+      servicePath
+    );
 
-    assert.equal((await service.authoriseInstitution(otherAddress)).confirmed, true);
-    Registry.prototype.isAuthorisedInstitution = async () => true;
-    assert.equal((await service.issueCredentialOnChain("b".repeat(64))).confirmed, true);
-    exists = true;
-    assert.equal((await service.revokeCredentialOnChain("b".repeat(64))).confirmed, true);
-    assert.equal((await service.verifyCredentialOnChain("b".repeat(64))).exists, true);
-    assert.ok(calls.some(([kind]) => kind === "rpcSigner"));
-    assert.ok(calls.some(([kind]) => kind === "issue"));
-    assert.ok(calls.some(([kind]) => kind === "revoke"));
-    assert.ok(calls.filter(([kind]) => kind === "contract" || kind === "bytecode").every(([, value]) => value === address));
-    const { resolveBlockchainSigner } = require("../backend/config/blockchainSigner");
-    const localConfig = getBlockchainConfig();
-    Registry.prototype.hasRole = async () => false;
-    await assert.rejects(resolveBlockchainSigner(localConfig, new Provider()), /No unlocked local RPC account/);
-    await assert.rejects(resolveBlockchainSigner(localConfig, { getNetwork: async () => ({ chainId: 1n }) }), /chain 31337/);
-    const external = { ...localConfig, network: "sepolia", chainId: 11155111, privateKey: null };
-    const noRpcFallback = { getSigner: () => { throw new Error("External RPC fallback forbidden"); }, listAccounts: () => { throw new Error("External account discovery forbidden"); } };
-    await assert.rejects(resolveBlockchainSigner(external, noRpcFallback), /requires DEPLOYER_PRIVATE_KEY/);
-    assert.ok(await resolveBlockchainSigner({ ...external, privateKey: "0x" + "1".repeat(64) }, noRpcFallback) instanceof Signer);
+    /*
+     * Platform administrator authorises the institution wallet.
+     */
+    const authorisationResult =
+      await service.authoriseInstitution(
+        otherAddress
+      );
 
+    assert.equal(
+      authorisationResult.confirmed,
+      true
+    );
+
+    assert.equal(
+      authorisationResult.issuerWallet,
+      address
+    );
+
+    assert.equal(
+      authorisationResult.walletAddress,
+      otherAddress
+    );
+
+    /*
+     * Credential issuance must be signed by the institution wallet,
+     * not by the platform administrator.
+     */
+    const issuanceResult =
+      await service.issueCredentialOnChain(
+        "b".repeat(64),
+        {
+          expectedInstitutionWallet:
+            otherAddress,
+        }
+      );
+
+    assert.equal(
+      issuanceResult.confirmed,
+      true
+    );
+
+    assert.equal(
+      issuanceResult.issuerWallet,
+      otherAddress
+    );
+
+    /*
+     * Credential revocation must also be signed by the institution
+     * wallet that originally issued the credential.
+     */
+    const revocationResult =
+      await service.revokeCredentialOnChain(
+        "b".repeat(64),
+        {
+          expectedInstitutionWallet:
+            otherAddress,
+        }
+      );
+
+    assert.equal(
+      revocationResult.confirmed,
+      true
+    );
+
+    assert.equal(
+      revocationResult.issuerWallet,
+      otherAddress
+    );
+
+    /*
+     * Read the resulting on-chain credential state.
+     */
+    const verification =
+      await service.verifyCredentialOnChain(
+        "b".repeat(64)
+      );
+
+    assert.equal(
+      verification.exists,
+      true
+    );
+
+    assert.equal(
+      verification.revoked,
+      true
+    );
+
+    assert.equal(
+      verification.issuer,
+      otherAddress
+    );
+
+    /*
+     * Confirm that both the administrator signer and institution
+     * signer were resolved through the local RPC.
+     */
+    assert.ok(
+      calls.some(
+        ([kind, value]) =>
+          kind === "rpcSigner" &&
+          value === address
+      )
+    );
+
+    assert.ok(
+      calls.some(
+        ([kind, value]) =>
+          kind === "rpcSigner" &&
+          value === otherAddress
+      )
+    );
+
+    /*
+     * Confirm the correct institution wallet was authorised.
+     */
+    assert.ok(
+      calls.some(
+        ([kind, value]) =>
+          kind === "authorise" &&
+          value === otherAddress
+      )
+    );
+
+    /*
+     * Confirm issuance used the institution wallet.
+     */
+    assert.ok(
+      calls.some(
+        ([kind, value]) =>
+          kind === "issue" &&
+          value === otherAddress
+      )
+    );
+
+    /*
+     * Confirm revocation used the same institution wallet.
+     */
+    assert.ok(
+      calls.some(
+        ([kind, value]) =>
+          kind === "revoke" &&
+          value === otherAddress
+      )
+    );
+
+    /*
+     * Contract resolution must continue to use the deployment
+     * metadata address.
+     */
+    assert.ok(
+      calls
+        .filter(
+          ([kind]) =>
+            kind === "contract" ||
+            kind === "bytecode"
+        )
+        .every(
+          ([, value]) =>
+            value === address
+        )
+    );
+
+    const {
+      resolveBlockchainSigner,
+    } = require(
+      "../backend/config/blockchainSigner"
+    );
+
+    const localConfig =
+      getBlockchainConfig();
+
+    /*
+     * Local signing must fail closed when no account has the
+     * administrator role.
+     */
+    adminRoleAvailable = false;
+
+    await assert.rejects(
+      resolveBlockchainSigner(
+        localConfig,
+        new Provider()
+      ),
+      /No unlocked local RPC account/
+    );
+
+    /*
+     * A signer must never be resolved from the wrong chain.
+     */
+    await assert.rejects(
+      resolveBlockchainSigner(
+        localConfig,
+        {
+          getNetwork: async () => ({
+            chainId: 1n,
+          }),
+        }
+      ),
+      /chain 31337/
+    );
+
+    /*
+     * External networks require an explicit administrator key.
+     */
+    const external = {
+      ...localConfig,
+      network: "sepolia",
+      chainId: 11155111,
+      privateKey: null,
+    };
+
+    const noRpcFallback = {
+      getSigner: () => {
+        throw new Error(
+          "External RPC fallback forbidden"
+        );
+      },
+
+      listAccounts: () => {
+        throw new Error(
+          "External account discovery forbidden"
+        );
+      },
+    };
+
+    await assert.rejects(
+      resolveBlockchainSigner(
+        external,
+        noRpcFallback
+      ),
+      /requires a valid DEPLOYER_PRIVATE_KEY|requires DEPLOYER_PRIVATE_KEY/
+    );
+
+    /*
+     * A valid external administrator private key creates a signer.
+     */
+    assert.ok(
+      (
+        await resolveBlockchainSigner(
+          {
+            ...external,
+            privateKey:
+              "0x" +
+              "1".repeat(64),
+          },
+          noRpcFallback
+        )
+      ) instanceof Signer
+    );
   } finally {
-    require.cache[ethersPath].exports = actualEthers;
-    if (existingService) require.cache[servicePath] = existingService; else delete require.cache[servicePath];
+    /*
+     * Restore the original ethers module and cached application
+     * modules so this test cannot contaminate other tests.
+     */
+    require.cache[ethersPath].exports =
+      actualEthers;
+
+    if (existingService) {
+      require.cache[servicePath] =
+        existingService;
+    } else {
+      delete require.cache[
+        servicePath
+      ];
+    }
+
+    if (existingSignerModule) {
+      require.cache[signerPath] =
+        existingSignerModule;
+    } else {
+      delete require.cache[
+        signerPath
+      ];
+    }
   }
 });
