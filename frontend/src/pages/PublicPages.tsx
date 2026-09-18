@@ -269,37 +269,147 @@ export function VerificationResult({
   data: Record<string, unknown>;
 }) {
   const outcome = String(
-    data.outcome || data.result || data.status || "UNKNOWN"
+    data.outcome ||
+      data.result ||
+      data.status ||
+      "UNKNOWN"
   ).toUpperCase();
+
+  const credential =
+    data.credential &&
+    typeof data.credential === "object"
+      ? (data.credential as Record<
+          string,
+          unknown
+        >)
+      : null;
+
+  const blockchain =
+    data.blockchain &&
+    typeof data.blockchain === "object"
+      ? (data.blockchain as Record<
+          string,
+          unknown
+        >)
+      : null;
+
+  const ipfs =
+    data.ipfs &&
+    typeof data.ipfs === "object"
+      ? (data.ipfs as Record<
+          string,
+          unknown
+        >)
+      : null;
+
+  const display = (
+    label: string,
+    value: unknown
+  ) => {
+    if (
+      value === null ||
+      value === undefined ||
+      value === ""
+    ) {
+      return null;
+    }
+
+    return (
+      <div>
+        <dt>{label}</dt>
+        <dd>{String(value)}</dd>
+      </div>
+    );
+  };
+
+  const ipfsStatus =
+    ipfs?.available === true
+      ? "Available"
+      : ipfs?.available === false
+      ? "Unavailable"
+      : "Unknown";
+
   return (
     <Card className="result">
       <Badge value={outcome} />
+
       <h2>
         {outcome === "VERIFIED"
           ? "Credential verified"
           : outcome === "REVOKED"
           ? "Credential revoked"
+          : outcome === "UNKNOWN"
+          ? "Credential not found"
+          : outcome === "PENDING"
+          ? "Credential verification pending"
+          : outcome === "FAILED"
+          ? "Credential processing failed"
+          : outcome ===
+            "SYSTEM_INCONSISTENCY"
+          ? "Credential requires review"
           : "Verification result"}
       </h2>
-      <dl>
-        {Object.entries(data)
-          .filter(
-            ([k, v]) =>
-              v != null &&
-              ![
-                "certificate_hash",
-                "public_token",
-                "processing_error",
-              ].includes(k)
-          )
-          .slice(0, 10)
-          .map(([k, v]) => (
-            <div key={k}>
-              <dt>{k.replaceAll("_", " ")}</dt>
-              <dd>{typeof v === "object" ? "Available" : String(v)}</dd>
-            </div>
-          ))}
-      </dl>
+
+      {credential ? (
+        <dl>
+          {display(
+            "Holder",
+            credential.studentName
+          )}
+
+          {display(
+            "Registration number",
+            credential.maskedStudentNumber
+          )}
+
+          {display(
+            "Institution",
+            credential.institutionName
+          )}
+
+          {display(
+            "Programme",
+            credential.programme
+          )}
+
+          {display(
+            "Qualification",
+            credential.qualification
+          )}
+
+          {display(
+            "Issue date",
+            credential.issueDate
+          )}
+
+          {display(
+            "Credential status",
+            credential.status
+          )}
+
+          {display(
+            "Blockchain proof",
+            blockchain?.confirmed === true
+              ? "Confirmed"
+              : "Not confirmed"
+          )}
+
+          {display(
+            "IPFS evidence",
+            ipfsStatus
+          )}
+
+          {display(
+            "Verified at",
+            data.verificationTime
+          )}
+        </dl>
+      ) : (
+        <p>
+          No matching credential record was
+          found.
+        </p>
+      )}
     </Card>
   );
 }
