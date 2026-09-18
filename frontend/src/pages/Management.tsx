@@ -25,7 +25,7 @@ export function ManagementPage({ kind }: { kind: Kind }) {
   return <ManagementList key={kind} kind={kind} />;
 }
 function ManagementList({ kind }: { kind: Kind }) {
-    const { user } = useAuth();
+  const { user } = useAuth();
   const [blockchainMessage, setBlockchainMessage] = useState("");
   const [blockchainError, setBlockchainError] = useState("");
   const [pendingInstitutionId, setPendingInstitutionId] = useState<string | null>(null);
@@ -50,7 +50,7 @@ function ManagementList({ kind }: { kind: Kind }) {
       return r.data;
     },
   });
-    const authoriseInstitution = useMutation({
+  const authoriseInstitution = useMutation({
     mutationFn: async (institutionId: string) =>
       api.post(`/institutions/${institutionId}/blockchain/authorise`),
 
@@ -93,10 +93,7 @@ function ManagementList({ kind }: { kind: Kind }) {
 
               return (
                 <Button
-                  disabled={
-                    authoriseInstitution.isPending &&
-                    pendingInstitutionId === institutionId
-                  }
+                  disabled={authoriseInstitution.isPending}
                   onClick={() => {
                     const confirmed = window.confirm(
                       `Authorise ${String(
@@ -154,16 +151,16 @@ function ManagementList({ kind }: { kind: Kind }) {
           </label>}
         </div>
         {blockchainError && (
-  <div className="notice error" role="alert">
-    {blockchainError}
-  </div>
-)}
+          <div className="notice error" role="alert">
+            {blockchainError}
+          </div>
+        )}
 
-{blockchainMessage && (
-  <div className="notice success">
-    {blockchainMessage}
-  </div>
-)}
+        {blockchainMessage && (
+          <div className="notice success">
+            {blockchainMessage}
+          </div>
+        )}
         <DataTable
           rows={rows}
           columns={columns}
@@ -273,8 +270,8 @@ export function CreatePage({
   });
   const roles =
     user?.role === "super_admin"
-      ? ["institution_admin", "issuer", "verifier", "super_admin"]
-      : ["issuer", "verifier"];
+      ? ["institution_admin", "issuer", "verifier", "student", "super_admin"]
+      : ["issuer", "verifier", "student"];
   return (
     <div className="page narrow">
       <h1>
@@ -923,8 +920,8 @@ export function UserDetail() {
   const target = (query.data || {}) as JsonRecord;
   const roles =
     actor?.role === "super_admin"
-      ? ["super_admin", "institution_admin", "issuer", "verifier"]
-      : ["issuer", "verifier"];
+      ? ["super_admin", "institution_admin", "issuer", "verifier", "student"]
+      : ["issuer", "verifier", "student"];
   const sensitive = (title: string, path: string, body?: JsonRecord) =>
     setConfirm({ title, path, body });
   return (
