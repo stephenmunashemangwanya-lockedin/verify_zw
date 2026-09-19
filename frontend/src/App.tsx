@@ -1,3 +1,4 @@
+import { AccreditationsPage } from "./pages/Accreditations";
 import { lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { LazyRouteBoundary } from "./routes/LazyRouteBoundary";
@@ -184,6 +185,10 @@ export default function App() {
               />
             </Route>
             <Route element={<RoleGuard roles={["super_admin"]} />}>
+              <Route
+                path="accreditations"
+                element={<AccreditationsPage />}
+              />
               <Route
                 path="institutions"
                 element={<ManagementPage kind="institutions" />}
