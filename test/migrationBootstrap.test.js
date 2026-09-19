@@ -46,7 +46,9 @@ const approvedMigrations = [
   "006_dashboard_analytics_indexes.sql",
   "007_student_account_ownership.sql",
   "008_research_trust_lifecycle.sql",
-   "009_verification_trust_results.sql",
+  "009_verification_trust_results.sql",
+  "010_structured_credential_proof.sql",
+   "011_signed_status_lists.sql",
 ];
 
 test(
@@ -67,10 +69,11 @@ test(
       fs.readdirSync(
         directory
       )
-        .filter((name) =>
-          name.endsWith(
-            ".sql"
-          )
+        .filter(
+          (name) =>
+            name.endsWith(
+              ".sql"
+            )
         )
         .sort();
 

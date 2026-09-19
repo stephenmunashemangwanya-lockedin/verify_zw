@@ -9,6 +9,15 @@ const publicCredentialSelect = `
     credentials.student_id,
     credentials.institution_id,
     credentials.certificate_hash,
+    credentials.credential_payload,
+    credentials.credential_commitment,
+    credentials.issuer_signature,
+    credentials.issuer_wallet,
+    credentials.proof_type,
+    credentials.proof_canonicalisation,
+    credentials.proof_hash_algorithm,
+    credentials.proof_version,
+    credentials.status_list_index,
     credentials.qualification,
     credentials.issue_date,
     credentials.award_date,
@@ -29,7 +38,8 @@ const publicCredentialSelect = `
     students.full_name AS student_name,
     students.programme,
 
-    institutions.name AS institution_name
+    institutions.name AS institution_name,
+    institutions.wallet_address AS institution_wallet
 
   FROM credentials
 
@@ -51,7 +61,9 @@ const findOne = async (
       `${publicCredentialSelect}
        WHERE ${whereClause} = $1
        LIMIT 1`,
-      [value]
+      [
+        value,
+      ]
     );
 
   return result.rows[0];
@@ -312,7 +324,8 @@ const listVerificationLogs =
         result.rows,
 
       total:
-        count.rows[0].total,
+        count.rows[0]
+          .total,
     };
   };
 

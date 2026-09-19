@@ -112,6 +112,12 @@ const nav: Array<
     "/app/verify",
     "Verify",
     ShieldCheck,
+    [
+      "super_admin",
+      "institution_admin",
+      "issuer",
+      "verifier",
+    ],
   ],
 
   [

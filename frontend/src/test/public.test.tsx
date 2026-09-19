@@ -64,7 +64,7 @@ describe("public experience", () => {
         <VerifyPage />
       </MemoryRouter>
     );
-    const hash = screen.getByRole("tab", { name: "hash" });
+    const hash = screen.getByRole("tab", { name: /hash/i });
     hash.focus();
     fireEvent.keyDown(hash, { key: "ArrowRight" });
     expect(screen.getByRole("tab", { name: "Credential ID" })).toHaveFocus();
@@ -96,12 +96,18 @@ describe("public experience", () => {
         <VerifyPage />
       </MemoryRouter>
     );
-    fireEvent.click(screen.getByRole("tab", { name: "file" }));
-    const file = new File(["pdf"], "award.pdf", { type: "application/pdf" });
+    fireEvent.click(screen.getByRole("tab", { name: /pdf only/i }));
+    const file = new File(["%PDF-1.4`n%%EOF"], "award.pdf", { type: "application/pdf" });
     fireEvent.change(screen.getByLabelText("Certificate PDF"), {
       target: { files: [file] },
     });
-    fireEvent.click(screen.getByText("Verify now"));
+
+    const verifyButton = screen.getByText("Verify now");
+    const form = verifyButton.closest("form");
+
+    expect(form).not.toBeNull();
+    fireEvent.submit(form!);
+
     await waitFor(() =>
       expect(api.post).toHaveBeenCalledWith(
         "/verify/file",
@@ -115,12 +121,34 @@ describe("public experience", () => {
         <VerifyPage />
       </MemoryRouter>
     );
-    fireEvent.click(screen.getByRole("tab", { name: "file" }));
-    fireEvent.change(screen.getByLabelText("Certificate PDF"), {
-      target: { files: [new File(["bad"], "bad.txt", { type: "text/plain" })] },
+    fireEvent.click(screen.getByRole("tab", { name: /pdf only/i }));
+    const fileInput = screen.getByLabelText(
+      "Certificate PDF"
+    ) as HTMLInputElement;
+
+    expect(fileInput).toHaveAttribute(
+      "accept",
+      "application/pdf"
+    );
+
+    const unsafeFile = new File(
+      ["not-a-pdf"],
+      "bad.txt",
+      {
+        type: "text/plain",
+      }
+    );
+
+    fireEvent.change(fileInput, {
+      target: {
+        files: [unsafeFile],
+      },
     });
-    fireEvent.click(screen.getByText("Verify now"));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Choose a PDF");
+
+    fireEvent.click(
+      screen.getByText("Verify now")
+    );
+
     expect(api.post).not.toHaveBeenCalled();
   });
   it.each([

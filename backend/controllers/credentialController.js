@@ -2,6 +2,7 @@ const fs = require("fs");
 
 const {
   createProcessingCredential,
+  setCredentialStructuredProof,
   updateCredentialIpfsData,
   markCredentialFailed,
   activateCredential,
@@ -35,6 +36,15 @@ const {
   issueCredentialOnChain,
   revokeCredentialOnChain,
 } = require("../services/blockchainService");
+
+const {
+  buildStructuredCredentialPayload,
+  signStructuredCredential,
+} = require("../services/structuredCredentialService");
+
+const {
+  publishStatusListForInstitution,
+} = require("../services/statusListPublisherService");
 
 const {
   createAuditLog,
@@ -157,6 +167,10 @@ const safeProcessingError =
         "BLOCKCHAIN_TRANSACTION_REVERTED",
         "BLOCKCHAIN_TRANSACTION_REJECTED",
         "BLOCKCHAIN_RECONCILIATION_REQUIRED",
+        "CREDENTIAL_CANONICALISATION_FAILED",
+        "CREDENTIAL_SIGNER_REQUIRED",
+        "CREDENTIAL_SIGNER_MISMATCH",
+        "CREDENTIAL_PROOF_PERSISTENCE_FAILED",
       ]);
 
     return allowedCodes.has(
@@ -316,9 +330,7 @@ const issueCredential =
           });
       }
 
-      if (
-        !institution.status
-      ) {
+      if (!institution.status) {
         await removeTemporaryFile(
           req.file.path
         );
@@ -362,9 +374,7 @@ const issueCredential =
           certificateHash
         );
 
-      if (
-        duplicateCredential
-      ) {
+      if (duplicateCredential) {
         await removeTemporaryFile(
           req.file.path
         );
@@ -379,12 +389,6 @@ const issueCredential =
           });
       }
 
-      /*
-       * Production route middleware supplies effectiveAwardDate.
-       * Direct legacy controller tests that omit awardDate remain
-       * compatible, while current UI/API traffic persists the
-       * explicit award date.
-       */
       const effectiveAwardDate =
         req.effectiveAwardDate ||
         awardDate ||
@@ -438,6 +442,174 @@ const issueCredential =
         },
       });
 
+      await createAuditLog({
+        ...requestAuditContext(
+          req
+        ),
+
+        institutionId,
+
+        action:
+          "CERTIFICATE_HASH_GENERATED",
+
+        entityType:
+          "credential",
+
+        entityId:
+          credential.id,
+
+        details: {
+          algorithm:
+            "SHA-256",
+
+          certificateHash,
+        },
+      });
+
+      let anchorHash =
+        certificateHash;
+
+      let structuredProof =
+        null;
+
+      if (
+        req.accreditationRecord
+      ) {
+        const payload =
+          buildStructuredCredentialPayload({
+            credentialId:
+              credential.id,
+
+            institutionId,
+
+            studentId,
+
+            studentNumber:
+              student.student_number,
+
+            qualification,
+
+            programme:
+              student.programme,
+
+            awardDate:
+              effectiveAwardDate,
+
+            issueDate,
+
+            statusListIndex:
+              credential
+                .status_list_index,
+          });
+
+        structuredProof =
+          await signStructuredCredential({
+            payload,
+
+            expectedInstitutionWallet:
+              institution
+                .wallet_address,
+          });
+
+        const storedProof =
+          await setCredentialStructuredProof(
+            credential.id,
+            {
+              payload,
+
+              commitment:
+                structuredProof
+                  .commitmentHash,
+
+              signature:
+                structuredProof
+                  .proof
+                  .signature,
+
+              issuerWallet:
+                structuredProof
+                  .proof
+                  .issuerWallet,
+
+              proofType:
+                structuredProof
+                  .proof
+                  .type,
+
+              canonicalisation:
+                structuredProof
+                  .proof
+                  .canonicalisation,
+
+              hashAlgorithm:
+                structuredProof
+                  .proof
+                  .hashAlgorithm,
+            }
+          );
+
+        if (!storedProof) {
+          const proofError =
+            new Error(
+              "Structured credential proof could not be persisted."
+            );
+
+          proofError.code =
+            "CREDENTIAL_PROOF_PERSISTENCE_FAILED";
+
+          throw proofError;
+        }
+
+        credential = {
+          ...credential,
+          ...storedProof,
+        };
+
+        anchorHash =
+          structuredProof
+            .commitmentHash;
+
+        await createAuditLog({
+          ...requestAuditContext(
+            req
+          ),
+
+          institutionId,
+
+          action:
+            "CREDENTIAL_STRUCTURED_PROOF_CREATED",
+
+          entityType:
+            "credential",
+
+          entityId:
+            credential.id,
+
+          details: {
+            proofVersion:
+              "structured-v2",
+
+            canonicalisation:
+              "RFC8785",
+
+            hashAlgorithm:
+              "SHA-256",
+
+            credentialCommitment:
+              anchorHash,
+
+            issuerWallet:
+              structuredProof
+                .proof
+                .issuerWallet,
+
+            statusListIndex:
+              credential
+                .status_list_index,
+          },
+        });
+      }
+
       if (
         req.accreditationRecord
       ) {
@@ -478,30 +650,6 @@ const issueCredential =
         });
       }
 
-      await createAuditLog({
-        ...requestAuditContext(
-          req
-        ),
-
-        institutionId,
-
-        action:
-          "CERTIFICATE_HASH_GENERATED",
-
-        entityType:
-          "credential",
-
-        entityId:
-          credential.id,
-
-        details: {
-          algorithm:
-            "SHA-256",
-
-          certificateHash,
-        },
-      });
-
       const ipfsMetadata = {
         credentialId:
           credential.id,
@@ -527,6 +675,19 @@ const issueCredential =
 
         ipfsMetadata.programme =
           student.programme;
+      }
+
+      if (structuredProof) {
+        ipfsMetadata.proofVersion =
+          "structured-v2";
+
+        ipfsMetadata.credentialCommitment =
+          structuredProof
+            .commitmentHash;
+
+        ipfsMetadata.statusListIndex =
+          credential
+            .status_list_index;
       }
 
       const ipfsResult =
@@ -563,15 +724,18 @@ const issueCredential =
             ipfsResult.cid,
 
           certificateHash,
+
+          anchorHash,
         },
       });
 
       const blockchainResult =
         await issueCredentialOnChain(
-          certificateHash,
+          anchorHash,
           {
             expectedInstitutionWallet:
-              institution.wallet_address,
+              institution
+                .wallet_address,
 
             onSubmitted: ({
               transactionHash,
@@ -592,6 +756,13 @@ const issueCredential =
 
                 details: {
                   transactionHash,
+
+                  anchorHash,
+
+                  proofVersion:
+                    structuredProof
+                      ? "structured-v2"
+                      : "legacy-v1",
                 },
               }),
           }
@@ -623,6 +794,8 @@ const issueCredential =
           network:
             blockchainResult
               .network,
+
+          anchorHash,
         },
       });
 
@@ -632,9 +805,7 @@ const issueCredential =
           blockchainResult
         );
 
-      if (
-        !activeCredential
-      ) {
+      if (!activeCredential) {
         const recoveryError =
           new Error(
             "Confirmed blockchain proof requires database reconciliation."
@@ -647,7 +818,8 @@ const issueCredential =
           500;
 
         recoveryError.transactionHash =
-          blockchainResult.transactionHash;
+          blockchainResult
+            .transactionHash;
 
         throw recoveryError;
       }
@@ -655,19 +827,105 @@ const issueCredential =
       credential =
         activeCredential;
 
+      if (structuredProof) {
+        try {
+          const publishedStatusList =
+            await publishStatusListForInstitution({
+              institutionId,
+
+              institutionWallet:
+                institution
+                  .wallet_address,
+            });
+
+          await createAuditLog({
+            ...requestAuditContext(
+              req
+            ),
+
+            institutionId,
+
+            action:
+              "STATUS_LIST_PUBLISHED_ON_ISSUANCE",
+
+            entityType:
+              "credential",
+
+            entityId:
+              credential.id,
+
+            details: {
+              version:
+                publishedStatusList
+                  .version,
+
+              statusListIndex:
+                credential
+                  .status_list_index,
+
+              nextUpdate:
+                publishedStatusList
+                  .next_update,
+
+              commitment:
+                publishedStatusList
+                  .commitment,
+
+              transactionHash:
+                publishedStatusList
+                  .blockchain_tx ||
+                null,
+            },
+          });
+        } catch (
+          statusListError
+        ) {
+          await createAuditLog({
+            ...requestAuditContext(
+              req
+            ),
+
+            institutionId,
+
+            action:
+              "STATUS_LIST_PUBLICATION_FAILED",
+
+            entityType:
+              "credential",
+
+            entityId:
+              credential.id,
+
+            details: {
+              phase:
+                "issuance",
+
+              errorCode:
+                statusListError
+                  .code ||
+                "STATUS_LIST_PUBLICATION_FAILED",
+            },
+          }).catch(
+            () => {}
+          );
+        }
+      }
+
       let qrCode =
         null;
 
       try {
         const generatedQr =
           await generateCredentialQrCode(
-            credential.public_token
+            credential
+              .public_token
           );
 
         const qrCredential =
           await updateCredentialQrCodePath(
             credential.id,
-            generatedQr.storedPath
+            generatedQr
+              .storedPath
           );
 
         credential = {
@@ -677,10 +935,12 @@ const issueCredential =
 
         qrCode = {
           path:
-            generatedQr.storedPath,
+            generatedQr
+              .storedPath,
 
           verificationUrl:
-            generatedQr.verificationUrl,
+            generatedQr
+              .verificationUrl,
         };
 
         await createAuditLog({
@@ -701,7 +961,8 @@ const issueCredential =
 
           details: {
             path:
-              generatedQr.storedPath,
+              generatedQr
+                .storedPath,
           },
         });
       } catch (qrError) {
@@ -747,6 +1008,13 @@ const issueCredential =
           transactionHash:
             blockchainResult
               .transactionHash,
+
+          proofVersion:
+            structuredProof
+              ? "structured-v2"
+              : "legacy-v1",
+
+          anchorHash,
         },
       });
 
@@ -797,6 +1065,41 @@ const issueCredential =
                 }
               : null,
 
+          proof:
+            structuredProof
+              ? {
+                  version:
+                    "structured-v2",
+
+                  credentialCommitment:
+                    structuredProof
+                      .commitmentHash,
+
+                  issuerWallet:
+                    structuredProof
+                      .proof
+                      .issuerWallet,
+
+                  canonicalisation:
+                    structuredProof
+                      .proof
+                      .canonicalisation,
+
+                  hashAlgorithm:
+                    structuredProof
+                      .proof
+                      .hashAlgorithm,
+
+                  type:
+                    structuredProof
+                      .proof
+                      .type,
+                }
+              : {
+                  version:
+                    "legacy-v1",
+                },
+
           ipfs:
             ipfsResult,
 
@@ -807,7 +1110,8 @@ const issueCredential =
 
           file: {
             originalName:
-              req.file.originalname,
+              req.file
+                .originalname,
 
             size:
               req.file.size,
@@ -816,6 +1120,9 @@ const issueCredential =
               "SHA-256",
 
             certificateHash,
+
+            blockchainAnchorHash:
+              anchorHash,
           },
         });
     } catch (error) {
@@ -924,7 +1231,8 @@ const issueCredential =
                       processingError,
 
                     transactionHash:
-                      error.transactionHash ||
+                      error
+                        .transactionHash ||
                       null,
                   },
                 }),
@@ -1193,7 +1501,6 @@ const getOneCredential =
           .status(404)
           .json({
             success: false,
-
             message:
               "Credential not found.",
           });
@@ -1358,7 +1665,8 @@ const revokeCredential =
         req.user.role !==
           "super_admin" &&
         req.user.institutionId !==
-          credential.institution_id
+          credential
+            .institution_id
       ) {
         return res
           .status(403)
@@ -1414,9 +1722,7 @@ const revokeCredential =
           });
       }
 
-      if (
-        !institution.status
-      ) {
+      if (!institution.status) {
         return res
           .status(422)
           .json({
@@ -1427,13 +1733,24 @@ const revokeCredential =
           });
       }
 
+      const anchorHash =
+        credential
+          .proof_version ===
+          "structured-v2" &&
+        credential
+          .credential_commitment
+          ? credential
+              .credential_commitment
+          : credential
+              .certificate_hash;
+
       blockchainResult =
         await revokeCredentialOnChain(
-          credential
-            .certificate_hash,
+          anchorHash,
           {
             expectedInstitutionWallet:
-              institution.wallet_address,
+              institution
+                .wallet_address,
 
             onSubmitted: ({
               transactionHash,
@@ -1458,6 +1775,7 @@ const revokeCredential =
 
                 details: {
                   transactionHash,
+                  anchorHash,
                 },
               }),
           }
@@ -1479,9 +1797,7 @@ const revokeCredential =
           }
         );
 
-      if (
-        !revokedCredential
-      ) {
+      if (!revokedCredential) {
         const recoveryError =
           new Error(
             "Confirmed revocation requires database reconciliation."
@@ -1494,6 +1810,114 @@ const revokeCredential =
           500;
 
         throw recoveryError;
+      }
+
+      if (
+        credential
+          .proof_version ===
+          "structured-v2" &&
+        credential
+          .status_list_index !==
+          null &&
+        credential
+          .status_list_index !==
+          undefined
+      ) {
+        try {
+          const publishedStatusList =
+            await publishStatusListForInstitution({
+              institutionId:
+                credential
+                  .institution_id,
+
+              institutionWallet:
+                institution
+                  .wallet_address,
+
+              revokeIndex:
+                credential
+                  .status_list_index,
+            });
+
+          await createAuditLog({
+            ...requestAuditContext(
+              req
+            ),
+
+            institutionId:
+              credential
+                .institution_id,
+
+            action:
+              "STATUS_LIST_PUBLISHED_ON_REVOCATION",
+
+            entityType:
+              "credential",
+
+            entityId:
+              credential.id,
+
+            details: {
+              version:
+                publishedStatusList
+                  .version,
+
+              statusListIndex:
+                credential
+                  .status_list_index,
+
+              nextUpdate:
+                publishedStatusList
+                  .next_update,
+
+              commitment:
+                publishedStatusList
+                  .commitment,
+
+              transactionHash:
+                publishedStatusList
+                  .blockchain_tx ||
+                null,
+            },
+          });
+        } catch (
+          statusListError
+        ) {
+          await createAuditLog({
+            ...requestAuditContext(
+              req
+            ),
+
+            institutionId:
+              credential
+                .institution_id,
+
+            action:
+              "STATUS_LIST_PUBLICATION_FAILED",
+
+            entityType:
+              "credential",
+
+            entityId:
+              credential.id,
+
+            details: {
+              phase:
+                "revocation",
+
+              statusListIndex:
+                credential
+                  .status_list_index,
+
+              errorCode:
+                statusListError
+                  .code ||
+                "STATUS_LIST_PUBLICATION_FAILED",
+            },
+          }).catch(
+            () => {}
+          );
+        }
       }
 
       await createAuditLog({
@@ -1518,6 +1942,8 @@ const revokeCredential =
           transactionHash:
             blockchainResult
               .transactionHash,
+
+          anchorHash,
 
           reason,
         },
@@ -1579,13 +2005,7 @@ const revokeCredential =
             error.transactionHash ||
             null,
         },
-      }).catch(
-        (auditError) =>
-          console.error(
-            "Revocation audit failed:",
-            auditError.message
-          )
-      );
+      }).catch(() => {});
 
       return res
         .status(
@@ -1724,7 +2144,8 @@ const generateCredentialPdf =
         req.user.role !==
           "super_admin" &&
         req.user.institutionId !==
-          credential.institution_id
+          credential
+            .institution_id
       ) {
         return res
           .status(403)
@@ -1806,7 +2227,7 @@ const generateCredentialPdf =
               pdf.status,
           },
         });
-    } catch (error) {
+    } catch (_error) {
       return res
         .status(500)
         .json({
@@ -1861,7 +2282,8 @@ const downloadCredentialPdf =
         req.user.role !==
           "student" &&
         req.user.institutionId !==
-          credential.institution_id
+          credential
+            .institution_id
       ) {
         return res
           .status(403)

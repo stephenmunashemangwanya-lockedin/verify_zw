@@ -1,4 +1,5 @@
-const express = require("express");
+const express =
+  require("express");
 
 const {
   issueCredential,
@@ -8,27 +9,82 @@ const {
   revokeCredential,
   generateCredentialPdf,
   downloadCredentialPdf,
-} = require("../controllers/credentialController");
+} = require(
+  "../controllers/credentialController"
+);
+
+const {
+  supersedeCredential,
+} = require(
+  "../controllers/credentialLifecycleController"
+);
 
 const {
   authenticate,
   requireCurrentUser,
   authorizeRoles,
-} = require("../middleware/authMiddleware");
+} = require(
+  "../middleware/authMiddleware"
+);
 
 const {
   uploadCertificate,
-} = require("../middleware/uploadMiddleware");
+} = require(
+  "../middleware/uploadMiddleware"
+);
 
-const router = express.Router();
-const { validate } = require("../middleware/validationMiddleware");
-const schemas = require("../validators/credentialValidator");
-const { adminActionLimiter, sensitiveNoStore } = require("../middleware/securityMiddleware");
+const {
+  requireAccreditationAtAwardDate,
+} = require(
+  "../middleware/accreditationIssuanceMiddleware"
+);
 
-router.use(authenticate, requireCurrentUser);
-router.use(sensitiveNoStore);
+const {
+  validate,
+} = require(
+  "../middleware/validationMiddleware"
+);
 
-router.get("/me", authorizeRoles("student"), validate({ query: schemas.listQuery }), listMyCredentials);
+const schemas =
+  require(
+    "../validators/credentialValidator"
+  );
+
+const lifecycleSchemas =
+  require(
+    "../validators/credentialLifecycleValidator"
+  );
+
+const {
+  adminActionLimiter,
+  sensitiveNoStore,
+} = require(
+  "../middleware/securityMiddleware"
+);
+
+const router =
+  express.Router();
+
+router.use(
+  authenticate,
+  requireCurrentUser
+);
+
+router.use(
+  sensitiveNoStore
+);
+
+router.get(
+  "/me",
+  authorizeRoles(
+    "student"
+  ),
+  validate({
+    query:
+      schemas.listQuery,
+  }),
+  listMyCredentials
+);
 
 router.get(
   "/",
@@ -38,7 +94,10 @@ router.get(
     "issuer",
     "verifier"
   ),
-  validate({ query: schemas.listQuery }),
+  validate({
+    query:
+      schemas.listQuery,
+  }),
   listCredentials
 );
 
@@ -51,7 +110,10 @@ router.get(
     "verifier",
     "student"
   ),
-  validate({ params: schemas.idParams }),
+  validate({
+    params:
+      schemas.idParams,
+  }),
   getOneCredential
 );
 
@@ -62,26 +124,82 @@ router.post(
     "institution_admin",
     "issuer"
   ),
-  uploadCertificate.single("certificate"),
-  validate({ body: schemas.issue }),
+  uploadCertificate.single(
+    "certificate"
+  ),
+  validate({
+    body:
+      schemas.issue,
+  }),
+  requireAccreditationAtAwardDate,
   issueCredential
 );
 
-router.get("/:id/pdf", authorizeRoles("super_admin", "institution_admin", "issuer", "verifier", "student"), validate({ params: schemas.idParams }), downloadCredentialPdf);
+router.get(
+  "/:id/pdf",
+  authorizeRoles(
+    "super_admin",
+    "institution_admin",
+    "issuer",
+    "verifier",
+    "student"
+  ),
+  validate({
+    params:
+      schemas.idParams,
+  }),
+  downloadCredentialPdf
+);
 
 router.patch(
   "/:id/revoke",
-  authorizeRoles("super_admin", "institution_admin"),
+  authorizeRoles(
+    "super_admin",
+    "institution_admin"
+  ),
   adminActionLimiter,
-  validate({ params: schemas.idParams, body: schemas.revoke }),
+  validate({
+    params:
+      schemas.idParams,
+
+    body:
+      schemas.revoke,
+  }),
   revokeCredential
+);
+
+router.patch(
+  "/:id/supersede",
+  authorizeRoles(
+    "super_admin",
+    "institution_admin",
+    "issuer"
+  ),
+  adminActionLimiter,
+  validate({
+    params:
+      schemas.idParams,
+
+    body:
+      lifecycleSchemas
+        .supersede,
+  }),
+  supersedeCredential
 );
 
 router.post(
   "/:id/generate-pdf",
-  authorizeRoles("super_admin", "institution_admin", "issuer"),
-  validate({ params: schemas.idParams }),
+  authorizeRoles(
+    "super_admin",
+    "institution_admin",
+    "issuer"
+  ),
+  validate({
+    params:
+      schemas.idParams,
+  }),
   generateCredentialPdf
 );
 
-module.exports = router;
+module.exports =
+  router;
