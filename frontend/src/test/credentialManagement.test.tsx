@@ -19,6 +19,7 @@ const detail = {
   student_name: "Example Student",
   student_number: "ST-001",
   institution_name: "Example Institution",
+  public_token: "11111111-1111-4111-8111-111111111111",
   qualification: "Diploma",
   issue_date: "2026-01-01",
   certificate_hash: "a".repeat(64),
@@ -83,7 +84,28 @@ describe("credential management", () => {
     expect(
       screen.getByRole("link", { name: /IPFS evidence/i })
     ).toHaveAttribute("rel", "noopener noreferrer");
-    expect(screen.getByAltText(/verification QR/i)).toBeInTheDocument();
+expect(
+  await screen.findByText(
+    "11111111-1111-4111-8111-111111111111"
+  )
+).toBeInTheDocument();
+
+expect(
+  screen.getByRole("button", {
+    name: /copy public token/i,
+  })
+).toBeInTheDocument();
+
+expect(
+  screen.getByRole("link", {
+    name: /open public verification/i,
+  })
+).toHaveAttribute(
+  "href",
+  expect.stringContaining(
+    "/verify/token/11111111-1111-4111-8111-111111111111"
+  )
+);
   });
   it("downloads the generated presentation PDF through authenticated API", async () => {
     render(wrapper(<CredentialDetail />));
@@ -124,12 +146,14 @@ describe("credential management", () => {
     fireEvent.change(screen.getByLabelText("Revocation reason"), {
       target: { value: "Issued in error" },
     });
-    fireEvent.click(screen.getByText("Confirm"));
-    await waitFor(() =>
-      expect(api.patch).toHaveBeenCalledWith(
-        "/credentials/credential-1/revoke",
-        { reason: "Issued in error" }
-      )
-    );
-  });
+   fireEvent.click(screen.getByText("Confirm"));
+
+await waitFor(() => {
+  expect(api.patch).toHaveBeenCalledWith(
+    "/credentials/credential-1/revoke",
+    { reason: "Issued in error" },
+    { timeout: 120000 }
+  );
+});
+});
 });
