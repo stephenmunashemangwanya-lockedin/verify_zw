@@ -192,7 +192,7 @@ export function IssueCredentialPage() {
   "/credentials/issue",
   data,
   {
-    timeout: 45000,
+    timeout: 120000,
   }
 );
         },
