@@ -188,10 +188,13 @@ export function IssueCredentialPage() {
               form
             );
 
-          return api.post(
-            "/credentials/issue",
-            data
-          );
+         return api.post(
+  "/credentials/issue",
+  data,
+  {
+    timeout: 45000,
+  }
+);
         },
 
       onSuccess:
