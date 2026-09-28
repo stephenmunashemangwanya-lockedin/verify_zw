@@ -9,6 +9,13 @@ const assert =
 const HASH =
   "ab".repeat(32);
 
+const { Wallet } = require("ethers");
+const { buildStructuredCredentialPayload } = require("../backend/services/structuredCredentialService");
+const { buildStatusListPayload } = require("../backend/services/statusListService");
+const { signCredentialPayload } = require("../backend/services/credentialProofService");
+const verificationTime = new Date("2026-09-22T12:00:00.000Z");
+let statusList;
+
 const baseCredential = {
   id:
     "11111111-1111-4111-8111-111111111111",
@@ -61,6 +68,36 @@ const baseCredential = {
     "Test University",
 };
 
+test.before(async () => {
+  const wallet = Wallet.createRandom();
+  baseCredential.student_id = "66666666-6666-4666-8666-666666666666";
+  baseCredential.status_list_index = 0;
+  const payload = buildStructuredCredentialPayload({
+    credentialId: baseCredential.id,
+    institutionId: baseCredential.institution_id,
+    studentId: baseCredential.student_id,
+    studentNumber: baseCredential.student_number,
+    qualification: baseCredential.qualification,
+    programme: baseCredential.programme,
+    awardDate: baseCredential.award_date,
+    issueDate: baseCredential.issue_date,
+    statusListIndex: 0,
+  });
+  const signed = await signCredentialPayload({ payload, signer: wallet, expectedIssuerWallet: wallet.address });
+  Object.assign(baseCredential, {
+    proof_version: "structured-v2", credential_payload: payload,
+    credential_commitment: signed.commitmentHash,
+    issuer_signature: signed.proof.signature,
+    issuer_wallet: wallet.address, institution_wallet: wallet.address,
+  });
+  const statusPayload = buildStatusListPayload({
+    institutionId: baseCredential.institution_id, version: 1, revokedIndices: [],
+    issuedAt: "2026-09-22T08:00:00.000Z", nextUpdate: "2026-09-23T08:00:00.000Z",
+  });
+  const signedStatus = await signCredentialPayload({ payload: statusPayload, signer: wallet, expectedIssuerWallet: wallet.address });
+  statusList = { payload: statusPayload, signature: signedStatus.proof.signature, commitment: signedStatus.commitmentHash, version: 1 };
+});
+
 const loadService = ({
   accreditation = {
     id:
@@ -82,6 +119,7 @@ const loadService = ({
   blockchain = {
     exists: true,
     revoked: false,
+    issuer: baseCredential.issuer_wallet,
   },
 
   pinned = true,
@@ -167,6 +205,12 @@ const loadService = ({
     servicePath
   ];
 
+  const statusPath = require.resolve("../backend/models/statusListModel");
+  require.cache[statusPath] = {
+    id: statusPath, filename: statusPath, loaded: true,
+    exports: { getLatestStatusList: async () => statusList },
+  };
+
   return require(
     servicePath
   );
@@ -181,6 +225,7 @@ test(
 
     const result =
       await verifyCredentialState({
+        verificationTime,
         credential:
           baseCredential,
 
@@ -225,6 +270,7 @@ test(
 
     const result =
       await verifyCredentialState({
+        verificationTime,
         credential:
           baseCredential,
 
@@ -260,6 +306,7 @@ test(
 
     const result =
       await verifyCredentialState({
+        verificationTime,
         credential: {
           ...baseCredential,
 

@@ -3,6 +3,8 @@ const {
   getAccreditationById,
   listAccreditations,
   updateAccreditationStatus,
+  updateAccreditationMetadata,
+  listAccreditationHistory,
 } = require(
   "../models/accreditationModel"
 );
@@ -152,8 +154,7 @@ const list = async (
       null;
 
     if (
-      req.user.role !==
-      "super_admin"
+      !["super_admin", "regulator"].includes(req.user.role)
     ) {
       if (
         institutionId &&
@@ -307,7 +308,23 @@ const changeStatus = async (
   }
 };
 
+const amendMetadata = async (req, res, next) => {
+  try {
+    const record = await updateAccreditationMetadata(req.params.id, req.body.sourceLabel, auditContext(req));
+    if (!record) return res.status(404).json({ success: false, message: "Accreditation record not found." });
+    return res.json({ success: true, accreditation: record });
+  } catch (error) { next(error); }
+};
+const history = async (req, res, next) => {
+  try {
+    if (!await getAccreditationById(req.params.id)) return res.status(404).json({ success: false, message: "Accreditation record not found." });
+    return res.json({ success: true, history: await listAccreditationHistory(req.params.id, req.query.limit, req.query.offset) });
+  } catch (error) { next(error); }
+};
+
 module.exports = {
+  amendMetadata,
+  history,
   create,
   list,
   changeStatus,

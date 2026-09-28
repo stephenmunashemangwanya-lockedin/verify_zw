@@ -197,6 +197,7 @@ const updateCredentialIpfsData =
            processing_error = NULL,
            updated_at = CURRENT_TIMESTAMP
          WHERE id = $1
+           AND status IN ('processing', 'pending')
          RETURNING
            id,
            student_id,
@@ -242,6 +243,7 @@ const markCredentialFailed =
            processing_error = $2,
            updated_at = CURRENT_TIMESTAMP
          WHERE id = $1
+           AND status IN ('processing', 'pending')
          RETURNING
            id,
            status,
@@ -272,6 +274,7 @@ const activateCredential =
            processing_error = NULL,
            updated_at = CURRENT_TIMESTAMP
          WHERE id = $1
+           AND status IN ('processing', 'pending')
            AND ipfs_cid IS NOT NULL
          RETURNING
            id,
@@ -518,6 +521,7 @@ const getCredentialById =
            credentials.superseded_by,
            credentials.superseded_at,
            credentials.supersession_reason,
+           superseded_original.id AS supersedes_credential_id,
            credentials.status,
            credentials.created_at,
            credentials.updated_at,
@@ -538,6 +542,9 @@ const getCredentialById =
          INNER JOIN institutions
            ON credentials.institution_id =
               institutions.id
+
+         LEFT JOIN credentials AS superseded_original
+           ON superseded_original.superseded_by = credentials.id
 
          WHERE credentials.id = $1
          LIMIT 1`,

@@ -49,6 +49,7 @@ const approvedMigrations = [
   "009_verification_trust_results.sql",
   "010_structured_credential_proof.sql",
    "011_signed_status_lists.sql",
+  "012_regulator_role.sql",
 ];
 
 test(

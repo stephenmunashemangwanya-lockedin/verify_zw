@@ -45,6 +45,12 @@ const nav: Array<
     "/app",
     "Dashboard",
     BarChart3,
+    [
+      "super_admin",
+      "institution_admin",
+      "issuer",
+      "verifier",
+    ],
   ],
 
   [
@@ -53,18 +59,18 @@ const nav: Array<
     Building2,
     [
       "super_admin",
-      "institution_admin",
     ],
   ],
 
+[
+  "/app/accreditations",
+  "Accreditations",
+  ShieldCheck,
   [
-    "/app/accreditations",
-    "Accreditations",
-    ShieldCheck,
-    [
-      "super_admin",
-    ],
+    "super_admin",
+    "regulator",
   ],
+],
 
   [
     "/app/users",
@@ -84,6 +90,7 @@ const nav: Array<
       "super_admin",
       "institution_admin",
       "issuer",
+      "verifier",
     ],
   ],
 
@@ -112,18 +119,16 @@ const nav: Array<
     "/app/verify",
     "Verify",
     ShieldCheck,
-    [
-      "super_admin",
-      "institution_admin",
-      "issuer",
-      "verifier",
-    ],
   ],
 
   [
     "/app/verifications",
     "Verification logs",
     FileCheck2,
+    [
+      "super_admin",
+      "institution_admin",
+    ],
   ],
 
   [

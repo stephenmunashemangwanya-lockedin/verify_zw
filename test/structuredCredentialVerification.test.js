@@ -375,6 +375,84 @@ const loadService =
     );
   };
 
+test("internal no-anchor preserves local transaction metadata requirements without chain reads", async () => {
+  const { credential, statusList } = await makeCredential();
+  const { createVerificationEvaluator } = loadService({ statusList });
+  let chainReads = 0;
+  const evaluator = createVerificationEvaluator({
+    verifyCredentialOnChain: async () => {
+      chainReads += 1;
+      throw new Error("No-anchor must not read the chain");
+    },
+    getLatestStatusList: async () => statusList,
+    findEffectiveAccreditation: async () => ({
+      id: "55555555-5555-4555-8555-555555555555",
+      programme: credential.programme,
+      valid_from: "2025-01-01",
+      valid_to: "2027-12-31",
+    }),
+    checkPinStatus: async () => true,
+  }, { mode: "no-anchor" });
+  const input = {
+    credential,
+    certificateHash: HASH,
+    verificationTime: new Date("2026-09-19T12:00:00.000Z"),
+  };
+  const valid = await evaluator.verifyCredentialState(input);
+  assert.equal(valid.result, "VERIFIED");
+  assert.equal(valid.evaluation.mode, "no-anchor");
+  assert.equal(valid.evaluation.chainRpcMs, 0);
+  assert.equal(valid.blockchain.exists, false);
+  assert.equal(valid.blockchain.anchorMatch, true);
+
+  for (const blockchain_tx of [undefined, null, ""]) {
+    const missing = await evaluator.verifyCredentialState({
+      ...input, credential: { ...credential, blockchain_tx },
+    });
+    assert.equal(missing.result, "SYSTEM_INCONSISTENCY");
+    assert.equal(missing.proof.signatureValid, true);
+    assert.equal(missing.lifecycle.fresh, true);
+    assert.equal(missing.accreditation.validAtAwardDate, true);
+  }
+  assert.equal(chainReads, 0);
+});
+
+test("public and default evaluators retain full anchor and local metadata requirements", async () => {
+  const { wallet, credential, statusList } = await makeCredential();
+  const blockchain = { exists: true, revoked: false, issuer: wallet.address };
+  const service = loadService({ statusList, blockchain });
+  let chainReads = 0;
+  const defaultEvaluator = service.createVerificationEvaluator({
+    verifyCredentialOnChain: async () => {
+      chainReads += 1;
+      return blockchain;
+    },
+  });
+  const input = {
+    credential,
+    certificateHash: HASH,
+    verificationTime: new Date("2026-09-19T12:00:00.000Z"),
+  };
+  for (const evaluator of [service, defaultEvaluator]) {
+    const valid = await evaluator.verifyCredentialState(input);
+    assert.equal(valid.result, "VERIFIED");
+    assert.equal(valid.evaluation.mode, "full");
+    const missing = await evaluator.verifyCredentialState({
+      ...input, credential: { ...credential, blockchain_tx: null },
+    });
+    assert.equal(missing.result, "SYSTEM_INCONSISTENCY");
+  }
+  assert.equal(chainReads, 2);
+
+  // The public export captures full mode; caller-supplied options cannot alter it.
+  blockchain.exists = false;
+  const publicResult = await service.verifyCredentialState({
+    ...input, mode: "no-anchor",
+  }, { mode: "no-anchor" });
+  assert.equal(publicResult.evaluation.mode, "full");
+  assert.equal(publicResult.result, "ANCHOR_MISMATCH");
+});
+
 test(
   "signed structured credential with matching anchor and fresh status is VERIFIED",
   async () => {

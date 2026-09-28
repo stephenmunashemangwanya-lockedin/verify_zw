@@ -5,6 +5,8 @@ const {
   create,
   list,
   changeStatus,
+  amendMetadata,
+  history,
 } = require(
   "../controllers/accreditationController"
 );
@@ -51,6 +53,7 @@ router.get(
   "/",
 
   authorizeRoles(
+    "regulator",
     "super_admin",
     "institution_admin",
     "issuer",
@@ -69,6 +72,7 @@ router.post(
   "/",
 
   authorizeRoles(
+    "regulator",
     "super_admin"
   ),
 
@@ -86,6 +90,7 @@ router.patch(
   "/:id/status",
 
   authorizeRoles(
+    "regulator",
     "super_admin"
   ),
 
@@ -101,6 +106,11 @@ router.patch(
 
   changeStatus
 );
+
+router.patch("/:id", authorizeRoles("super_admin", "regulator"), adminActionLimiter,
+  validate({ params: schemas.idParams, body: schemas.metadata }), amendMetadata);
+router.get("/:id/history", authorizeRoles("super_admin", "regulator"),
+  validate({ params: schemas.idParams, query: schemas.historyQuery }), history);
 
 module.exports =
   router;

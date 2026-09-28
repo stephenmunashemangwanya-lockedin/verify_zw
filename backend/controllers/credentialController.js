@@ -1175,7 +1175,7 @@ const issueCredential =
             ...auditContext,
 
             action:
-              "ipfs_upload_failure",
+              processingError.startsWith("IPFS_") ? "ipfs_upload_failure" : "credential_processing_failure",
 
             entityType:
               "credential",

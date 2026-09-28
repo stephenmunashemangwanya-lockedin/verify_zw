@@ -1,3 +1,4 @@
+const { validateStructuredCredentialBinding } = require("./structuredCredentialService");
 const {
   getAddress,
   isAddress,
@@ -31,13 +32,20 @@ const {
   maskStudentNumber,
 } = require("../utils/maskStudentNumber");
 
+const createVerificationEvaluator = (dependencies = {}, { mode = "full" } = {}) => {
+  if (!["full", "no-anchor"].includes(mode)) throw new Error("Invalid internal verification mode");
+  const chainRead = dependencies.verifyCredentialOnChain || verifyCredentialOnChain;
+  const statusRead = dependencies.getLatestStatusList || getLatestStatusList;
+  const accreditationRead = dependencies.findEffectiveAccreditation || findEffectiveAccreditation;
+  const pinRead = dependencies.checkPinStatus || checkPinStatus;
+
 const safeIpfsAvailability =
   async (cid) => {
     if (!cid) {
       return false;
     }
 
-    return checkPinStatus(
+    return pinRead(
       cid
     ).catch(
       () => null
@@ -73,7 +81,7 @@ const evaluateAccreditation =
     }
 
     const record =
-      await findEffectiveAccreditation({
+      await accreditationRead({
         institutionId:
           credential.institution_id,
 
@@ -181,7 +189,7 @@ const evaluateCredentialProof =
         true,
 
       signatureValid:
-        signature.valid,
+        signature.valid && validateStructuredCredentialBinding(credential),
 
       recoveredWallet:
         signature
@@ -330,7 +338,7 @@ const evaluateLifecycleStatus =
 
     try {
       statusList =
-        await getLatestStatusList(
+        await statusRead(
           credential
             .institution_id
         );
@@ -378,6 +386,8 @@ const evaluateLifecycleStatus =
 
         expectedInstitutionWallet:
           expectedWallet,
+
+        expectedInstitutionId: credential.institution_id,
 
         statusListIndex:
           credential
@@ -519,10 +529,11 @@ const verifyCredentialState =
       proof.anchorHash ||
       certificateHash;
 
-    const blockchain =
-      await verifyCredentialOnChain(
-        anchorHash
-      );
+    const rpcStart = performance.now();
+    const blockchain = mode === "full"
+      ? await chainRead(anchorHash)
+      : { exists: false, revoked: false, issuer: null };
+    const chainRpcMs = mode === "full" ? performance.now() - rpcStart : 0;
 
     const ipfsAvailable =
       credential
@@ -560,8 +571,9 @@ const verifyCredentialState =
           )
         : null;
 
-    const anchorMatch =
-      proof.structured
+    const anchorMatch = mode === "no-anchor"
+      ? true
+      : proof.structured
         ? Boolean(
             proof
               .commitmentMatchesStored &&
@@ -588,7 +600,6 @@ const verifyCredentialState =
         "active" &&
       proof.signatureValid ===
         true &&
-      anchorMatch &&
       !(
         accreditation.checked &&
         accreditation
@@ -644,7 +655,6 @@ const verifyCredentialState =
           ? "SYSTEM_INCONSISTENCY"
           : "PENDING";
     } else if (
-      proof.structured &&
       proof.signatureValid !==
         true
     ) {
@@ -652,17 +662,16 @@ const verifyCredentialState =
         "SIGNATURE_INVALID";
     } else if (
       proof.structured &&
-      !anchorMatch
+      (!proof.commitmentMatchesStored || !anchorMatch)
     ) {
       result =
         "ANCHOR_MISMATCH";
     } else if (
       credential.status ===
         "active" &&
-      accreditation.checked &&
       accreditation
-        .validAtAwardDate ===
-        false
+        .validAtAwardDate !==
+        true
     ) {
       result =
         "ACCREDITATION_INVALID";
@@ -690,7 +699,9 @@ const verifyCredentialState =
       credential.ipfs_cid &&
       credential.blockchain_tx &&
       (
-        !proof.structured ||
+        proof.signatureValid === true &&
+        accreditation.validAtAwardDate === true &&
+        lifecycle.revoked === false &&
         lifecycle.fresh ===
           true
       )
@@ -704,6 +715,7 @@ const verifyCredentialState =
 
     return {
       result,
+      evaluation: { mode, chainRpcMs },
 
       credential:
         credential
@@ -880,8 +892,7 @@ const verifyCredentialState =
     };
   };
 
-module.exports = {
-  verifyCredentialState,
-  evaluateCredentialProof,
-  evaluateLifecycleStatus,
+return { verifyCredentialState, evaluateCredentialProof, evaluateLifecycleStatus };
 };
+// Public callers receive the full evaluator. No request option can alter its mode.
+module.exports = { ...createVerificationEvaluator(), createVerificationEvaluator };

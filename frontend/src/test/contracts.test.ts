@@ -25,10 +25,15 @@ describe("Stage 21 route and integration contracts", () => {
     expect(managementSource).toMatch(/["']\/credentials\/issue["']/));
   it("uses multipart FormData for issuance", () =>
     expect(managementSource).toContain("new FormData(form)"));
-  it("uses an allowed role selector instead of a raw role input", () => {
-    expect(managementSource).toContain('<select required name="role">');
-    expect(managementSource).toContain("['issuer','verifier']");
-  });
+ it("uses an allowed role selector instead of a raw role input", () => {
+  expect(managementSource).toMatch(
+  /<select\b(?=[^>]*\brequired\b)(?=[^>]*\bname=["']role["'])[^>]*>/
+);
+
+  expect(managementSource).toMatch(
+    /const\s+roles\s*=[\s\S]*?["']issuer["'][\s\S]*?["']verifier["']/
+  );
+});
   it("shows institution selection only to super administrators", () => {
     expect(managementSource).toMatch(
       /user\?\.role\s*===\s*["']super_admin["']/
@@ -41,12 +46,13 @@ describe("Stage 21 route and integration contracts", () => {
     );
     expect(managementSource).toContain("delete body.institutionId");
   });
-  it("surfaces backend provisioning denial through a controlled error notice", () => {
-    expect(managementSource).toMatch(
-      /setError\(e\.message\s*\|\|\s*["']Unable to create record\.["']\)/
-    );
-    expect(managementSource).toContain("notice error");
-  });
+ it("surfaces backend provisioning denial through a controlled error notice", () => {
+  expect(managementSource).toMatch(
+    /setError\(\s*e\.message\s*\|\|\s*["']Unable to create record\.["']\s*\)/
+  );
+
+  expect(managementSource).toContain("notice error");
+});
   it("configures safe public environment variables only", () => {
     expect(apiSource).toContain("VITE_API_BASE_URL");
     expect(apiSource).not.toMatch(

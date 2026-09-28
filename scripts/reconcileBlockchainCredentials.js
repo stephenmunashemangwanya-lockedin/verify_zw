@@ -26,9 +26,17 @@ const { getBlockchainConfig } = require("../backend/config/blockchain");
       details: { previousStatus: credential.status },
     });
     try {
-      const proof = await verifyCredentialOnChain(credential.certificate_hash);
+      // FAILED evidence is terminal; reconciliation reports it without reactivation.
+      if (credential.status === "failed") {
+        summary.unresolved += 1;
+        continue;
+      }
+      const anchorHash = credential.proof_version === "structured-v2"
+        ? credential.credential_commitment : credential.certificate_hash;
+      if (!anchorHash) throw Object.assign(new Error("Missing commitment"), { code: "COMMITMENT_MISSING" });
+      const proof = await verifyCredentialOnChain(anchorHash);
       const event = proof.exists
-        ? await findCredentialIssuanceEvent(credential.certificate_hash)
+        ? await findCredentialIssuanceEvent(anchorHash)
         : null;
       if (!proof.exists || proof.revoked || !event) {
         summary.unresolved += 1;
@@ -42,12 +50,13 @@ const { getBlockchainConfig } = require("../backend/config/blockchain");
         continue;
       }
 
-      await activateCredential(credential.id, {
+      const activated = await activateCredential(credential.id, {
         transactionHash: event.transactionHash,
         blockNumber: event.blockNumber,
         network: config.network,
         contractAddress: config.contractAddress,
       });
+      if (!activated) throw Object.assign(new Error("Lifecycle changed"), { code: "LIFECYCLE_CONFLICT" });
       summary.recovered += 1;
       await createAuditLog({
         action: "blockchain_reconciliation_succeeded",

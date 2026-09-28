@@ -1,13 +1,27 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
 import {
   useMutation,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { Link, useParams } from "react-router-dom";
+
+import {
+  Link,
+  useParams,
+} from "react-router-dom";
+
 import QRCode from "qrcode";
 
-import { api, downloadBlob } from "../api/client";
+import {
+  api,
+  downloadBlob,
+} from "../api/client";
+
 import {
   Badge,
   Button,
@@ -15,12 +29,19 @@ import {
   ConfirmDialog,
   State,
 } from "../components/ui";
+
 import {
   DataTable,
   type Column,
 } from "../components/DataTable";
-import { useAuth } from "../context/AuthContext";
-import type { JsonRecord } from "../types";
+
+import {
+  useAuth,
+} from "../context/AuthContext";
+
+import type {
+  JsonRecord,
+} from "../types";
 
 type Kind =
   | "institutions"
@@ -172,7 +193,7 @@ function ManagementList({ kind }: { kind: Kind }) {
           <h1>{title(kind)}</h1>
         </div>
 
-        {canCreate(kind) && (
+        {canCreate(kind, user?.role) && (
           <Link
             className="button primary"
             to={`/app/${kind}/new`}
@@ -234,6 +255,7 @@ function ManagementList({ kind }: { kind: Kind }) {
                         "active",
                         "failed",
                         "revoked",
+                        "superseded",
                       ]
                     : ["active", "inactive"]
                 ).map((value) => (
@@ -282,13 +304,37 @@ function title(k: string) {
     .join(" ");
 }
 
-function canCreate(k: Kind) {
-  return [
-    "institutions",
-    "users",
-    "students",
-    "credentials",
-  ].includes(k);
+function canCreate(
+  k: Kind,
+  role?: string
+) {
+  if (!role) {
+    return false;
+  }
+
+  if (k === "institutions") {
+    return role === "super_admin";
+  }
+
+  if (k === "users") {
+    return [
+      "super_admin",
+      "institution_admin",
+    ].includes(role);
+  }
+
+  if (
+    k === "students" ||
+    k === "credentials"
+  ) {
+    return [
+      "super_admin",
+      "institution_admin",
+      "issuer",
+    ].includes(role);
+  }
+
+  return false;
 }
 
 function columnsFor(k: Kind): Column<JsonRecord>[] {
@@ -559,6 +605,7 @@ export function CreatePage({
           "issuer",
           "verifier",
           "student",
+          "regulator",
           "super_admin",
         ]
       : [
@@ -653,7 +700,7 @@ export function CreatePage({
 
                   <select name="institutionId">
                     <option value="">
-                      Global (super administrator only)
+                      Global role (super administrator or regulator)
                     </option>
 
                     {(institutions.data || []).map(
@@ -906,17 +953,19 @@ export function StudentDetail() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  const [
-    institutionChange,
-    setInstitutionChange,
-  ] = useState<string | null>(null);
+  const [institutionChange, setInstitutionChange] =
+    useState<string | null>(null);
+
+  const [accountUserId, setAccountUserId] = useState("");
 
   const student = useQuery({
     queryKey: ["students", id],
 
     queryFn: async () =>
       (
-        await api.get(`/students/${id}`)
+        await api.get(
+          `/students/${id}`
+        )
       ).data.student,
   });
 
@@ -929,12 +978,15 @@ export function StudentDetail() {
 
     queryFn: async () =>
       (
-        await api.get("/credentials", {
-          params: {
-            studentId: id,
-            limit: 20,
-          },
-        })
+        await api.get(
+          "/credentials",
+          {
+            params: {
+              studentId: id,
+              limit: 20,
+            },
+          }
+        )
       ).data,
 
     enabled: Boolean(student.data),
@@ -948,21 +1000,74 @@ export function StudentDetail() {
 
     queryFn: async () =>
       (
-        await api.get("/institutions", {
-          params: {
-            limit: 100,
-            status: "active",
-          },
-        })
+        await api.get(
+          "/institutions",
+          {
+            params: {
+              limit: 100,
+              status: "active",
+            },
+          }
+        )
       ).data.institutions || [],
 
-    enabled: user?.role === "super_admin",
+    enabled:
+      user?.role ===
+      "super_admin",
   });
 
-  const complete = (text: string) => {
+  const record =
+    (student.data || {}) as JsonRecord;
+
+  const canEdit = [
+    "super_admin",
+    "institution_admin",
+    "issuer",
+  ].includes(
+    user?.role || ""
+  );
+
+  const canLinkAccount = [
+    "super_admin",
+    "institution_admin",
+  ].includes(
+    user?.role || ""
+  );
+
+  const studentAccounts = useQuery({
+    queryKey: [
+      "users",
+      "student-account-link",
+      id,
+    ],
+
+    queryFn: async () =>
+      (
+        await api.get(
+          "/users",
+          {
+            params: {
+              page: 1,
+              limit: 100,
+              status: "active",
+            },
+          }
+        )
+      ).data.users || [],
+
+    enabled:
+      Boolean(student.data) &&
+      !record.user_id &&
+      canLinkAccount,
+  });
+
+  const complete = (
+    text: string
+  ) => {
     setMessage(text);
     setError("");
     setInstitutionChange(null);
+    setAccountUserId("");
 
     void student.refetch();
 
@@ -972,19 +1077,27 @@ export function StudentDetail() {
   };
 
   const save = useMutation({
-    mutationFn: (body: JsonRecord) =>
+    mutationFn: (
+      body: JsonRecord
+    ) =>
       api.patch(
         `/students/${id}`,
         body
       ),
 
-    onSuccess: (response) =>
+    onSuccess: (
+      response
+    ) =>
       complete(
         response.data.message ||
           "Student updated."
       ),
 
-    onError: (value: { message?: string }) =>
+    onError: (
+      value: {
+        message?: string;
+      }
+    ) =>
       setError(
         value.message ||
           "Unable to update student."
@@ -992,7 +1105,9 @@ export function StudentDetail() {
   });
 
   const reassign = useMutation({
-    mutationFn: (institutionId: string) =>
+    mutationFn: (
+      institutionId: string
+    ) =>
       api.patch(
         `/students/${id}/institution`,
         {
@@ -1000,26 +1115,94 @@ export function StudentDetail() {
         }
       ),
 
-    onSuccess: (response) =>
+    onSuccess: (
+      response
+    ) =>
       complete(
         response.data.message ||
           "Student institution reassigned."
       ),
 
-    onError: (value: { message?: string }) =>
+    onError: (
+      value: {
+        message?: string;
+      }
+    ) =>
       setError(
         value.message ||
           "Unable to reassign student."
       ),
   });
 
-  const record = (student.data || {}) as JsonRecord;
+  const linkAccount = useMutation({
+    mutationFn: (
+      userId: string
+    ) =>
+      api.post(
+        `/students/${id}/account`,
+        {
+          userId,
+        }
+      ),
 
-  const canEdit = [
-    "super_admin",
-    "institution_admin",
-    "issuer",
-  ].includes(user?.role || "");
+    onSuccess: (
+      response
+    ) => {
+      complete(
+        response.data.message ||
+          "Student account linked successfully."
+      );
+
+      void queryClient.invalidateQueries({
+        queryKey: ["users"],
+      });
+    },
+
+    onError: (
+      value: {
+        message?: string;
+      }
+    ) =>
+      setError(
+        value.message ||
+          "Unable to link student account."
+      ),
+  });
+
+  const eligibleStudentAccounts =
+    (
+      studentAccounts.data ||
+      []
+    ).filter(
+      (
+        account: JsonRecord
+      ) => {
+        const role = String(
+          account.role || ""
+        );
+
+        const institutionId = String(
+          account.institutionId ??
+            account.institution_id ??
+            ""
+        );
+
+        const isActive =
+          account.isActive ??
+          account.is_active ??
+          true;
+
+        return (
+          role === "student" &&
+          isActive !== false &&
+          institutionId ===
+            String(
+              record.institution_id ||
+                ""
+            )
+        );
+      }
+    );
 
   return (
     <div className="page">
@@ -1029,7 +1212,9 @@ export function StudentDetail() {
             Student management
           </span>
 
-          <h1>Student details</h1>
+          <h1>
+            Student details
+          </h1>
         </div>
 
         <Link
@@ -1041,34 +1226,51 @@ export function StudentDetail() {
       </div>
 
       <State
-        loading={student.isLoading}
-        error={student.error}
-        empty={!student.data}
+        loading={
+          student.isLoading
+        }
+        error={
+          student.error
+        }
+        empty={
+          !student.data
+        }
       >
         <div className="grid two">
           <Card title="Academic identity">
             {canEdit ? (
               <form
-                onSubmit={(event) => {
+                onSubmit={(
+                  event
+                ) => {
                   event.preventDefault();
 
-                  const data = new FormData(
-                    event.currentTarget
-                  );
+                  const data =
+                    new FormData(
+                      event.currentTarget
+                    );
 
                   save.mutate({
                     studentNumber:
-                      data.get("studentNumber"),
+                      data.get(
+                        "studentNumber"
+                      ),
 
                     fullName:
-                      data.get("fullName"),
+                      data.get(
+                        "fullName"
+                      ),
 
                     email:
-                      data.get("email") ||
+                      data.get(
+                        "email"
+                      ) ||
                       null,
 
                     programme:
-                      data.get("programme"),
+                      data.get(
+                        "programme"
+                      ),
                   });
                 }}
               >
@@ -1076,7 +1278,8 @@ export function StudentDetail() {
                   name="studentNumber"
                   label="Student number"
                   defaultValue={String(
-                    record.student_number || ""
+                    record.student_number ||
+                      ""
                   )}
                 />
 
@@ -1084,7 +1287,8 @@ export function StudentDetail() {
                   name="fullName"
                   label="Full name"
                   defaultValue={String(
-                    record.full_name || ""
+                    record.full_name ||
+                      ""
                   )}
                 />
 
@@ -1095,7 +1299,8 @@ export function StudentDetail() {
                     name="email"
                     type="email"
                     defaultValue={String(
-                      record.email || ""
+                      record.email ||
+                        ""
                     )}
                   />
                 </label>
@@ -1104,13 +1309,16 @@ export function StudentDetail() {
                   name="programme"
                   label="Programme"
                   defaultValue={String(
-                    record.programme || ""
+                    record.programme ||
+                      ""
                   )}
                 />
 
                 <Button
                   className="primary"
-                  disabled={save.isPending}
+                  disabled={
+                    save.isPending
+                  }
                 >
                   {save.isPending
                     ? "Saving…"
@@ -1120,21 +1328,34 @@ export function StudentDetail() {
             ) : (
               <dl>
                 <div>
-                  <dt>Student number</dt>
+                  <dt>
+                    Student number
+                  </dt>
+
                   <dd>
-                    {String(record.student_number)}
+                    {String(
+                      record.student_number
+                    )}
                   </dd>
                 </div>
 
                 <div>
-                  <dt>Full name</dt>
+                  <dt>
+                    Full name
+                  </dt>
+
                   <dd>
-                    {String(record.full_name)}
+                    {String(
+                      record.full_name
+                    )}
                   </dd>
                 </div>
 
                 <div>
-                  <dt>Email</dt>
+                  <dt>
+                    Email
+                  </dt>
+
                   <dd>
                     {String(
                       record.email ||
@@ -1144,9 +1365,14 @@ export function StudentDetail() {
                 </div>
 
                 <div>
-                  <dt>Programme</dt>
+                  <dt>
+                    Programme
+                  </dt>
+
                   <dd>
-                    {String(record.programme)}
+                    {String(
+                      record.programme
+                    )}
                   </dd>
                 </div>
               </dl>
@@ -1156,7 +1382,9 @@ export function StudentDetail() {
           <Card title="Institution and credentials">
             <dl>
               <div>
-                <dt>Institution</dt>
+                <dt>
+                  Institution
+                </dt>
 
                 <dd>
                   {String(
@@ -1167,31 +1395,166 @@ export function StudentDetail() {
               </div>
 
               <div>
-                <dt>Related credentials</dt>
+                <dt>
+                  Related credentials
+                </dt>
 
                 <dd>
                   {Number(
                     credentials.data
                       ?.pagination
                       ?.total ??
-                      credentials.data?.total ??
+                      credentials.data
+                        ?.total ??
                       0
                   )}
                 </dd>
               </div>
 
               <div>
-                <dt>Created</dt>
+                <dt>
+                  Student login account
+                </dt>
+
+                <dd>
+                  {record.user_id
+                    ? "Linked"
+                    : "Not linked"}
+                </dd>
+              </div>
+
+              <div>
+                <dt>
+                  Created
+                </dt>
 
                 <dd>
                   {String(
-                    record.created_at || ""
-                  ).slice(0, 10)}
+                    record.created_at ||
+                      ""
+                  ).slice(
+                    0,
+                    10
+                  )}
                 </dd>
               </div>
             </dl>
 
-            {user?.role === "super_admin" && (
+            {canLinkAccount &&
+              !record.user_id && (
+                <>
+                  <label>
+                    Link student login account
+
+                    <select
+                      aria-label="Student login account"
+                      value={
+                        accountUserId
+                      }
+                      disabled={
+                        studentAccounts.isLoading ||
+                        linkAccount.isPending
+                      }
+                      onChange={(
+                        event
+                      ) =>
+                        setAccountUserId(
+                          event.target.value
+                        )
+                      }
+                    >
+                      <option value="">
+                        Select active student account
+                      </option>
+
+                      {eligibleStudentAccounts.map(
+                        (
+                          account:
+                            JsonRecord
+                        ) => (
+                          <option
+                            key={String(
+                              account.id
+                            )}
+                            value={String(
+                              account.id
+                            )}
+                          >
+                            {String(
+                              account.fullName ??
+                                account.full_name ??
+                                account.email ??
+                                "Student account"
+                            )}
+
+                            {account.email
+                              ? ` — ${String(
+                                  account.email
+                                )}`
+                              : ""}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </label>
+
+                  {!studentAccounts.isLoading &&
+                    eligibleStudentAccounts.length ===
+                      0 && (
+                      <p className="notice">
+                        No eligible active
+                        student account is
+                        currently available
+                        for this institution.
+                        Create the student
+                        user account first,
+                        then return here to
+                        link it.
+                      </p>
+                    )}
+
+                  <Button
+                    disabled={
+                      !accountUserId ||
+                      linkAccount.isPending
+                    }
+                    onClick={() => {
+                      if (
+                        !accountUserId
+                      ) {
+                        return;
+                      }
+
+                      const confirmed =
+                        window.confirm(
+                          "Link this login account to the student record? This establishes credential ownership for the account."
+                        );
+
+                      if (
+                        confirmed
+                      ) {
+                        linkAccount.mutate(
+                          accountUserId
+                        );
+                      }
+                    }}
+                  >
+                    {linkAccount.isPending
+                      ? "Linking…"
+                      : "Link account"}
+                  </Button>
+                </>
+              )}
+
+          {canLinkAccount &&
+  Boolean(record.user_id) && (
+    <p className="notice">
+      A student login account is already linked to this student record.
+    </p>
+  )}
+
+            {user?.role ===
+              "super_admin" && (
               <label>
                 Reassign institution
 
@@ -1204,7 +1567,9 @@ export function StudentDetail() {
                         ""
                     )
                   }
-                  onChange={(event) =>
+                  onChange={(
+                    event
+                  ) =>
                     setInstitutionChange(
                       event.target.value
                     )
@@ -1217,8 +1582,14 @@ export function StudentDetail() {
                     Select active institution
                   </option>
 
-                  {(institutions.data || []).map(
-                    (institution: JsonRecord) => (
+                  {(
+                    institutions.data ||
+                    []
+                  ).map(
+                    (
+                      institution:
+                        JsonRecord
+                    ) => (
                       <option
                         key={String(
                           institution.id
@@ -1263,23 +1634,32 @@ export function StudentDetail() {
         )}
         title="Reassign this student?"
         onCancel={() =>
-          setInstitutionChange(null)
-        }
-        onConfirm={() =>
-          institutionChange &&
-          reassign.mutate(
-            institutionChange
+          setInstitutionChange(
+            null
           )
         }
+        onConfirm={() => {
+          if (
+            institutionChange
+          ) {
+            reassign.mutate(
+              institutionChange
+            );
+          }
+        }}
       >
         <p>
-          Reassignment is allowed only when the student has no credential
-          history. Existing credentials are never moved or rewritten.
+          Reassignment is allowed
+          only when the student has
+          no credential history.
+          Existing credentials are
+          never moved or rewritten.
         </p>
       </ConfirmDialog>
     </div>
   );
 }
+
 
 /*
  * Builds the public verification URL from the public token
@@ -1433,6 +1813,21 @@ export function CredentialDetail() {
 
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
+  const [supersedeOpen, setSupersedeOpen] = useState(false);
+  const [replacementCredentialId, setReplacementCredentialId] = useState("");
+  const [supersessionReason, setSupersessionReason] = useState("");
+  const [replacementPage, setReplacementPage] = useState(1);
+  const [correctionMessage, setCorrectionMessage] = useState("");
+  const [correctionError, setCorrectionError] = useState("");
+
+  useEffect(() => {
+    setSupersedeOpen(false);
+    setReplacementCredentialId("");
+    setSupersessionReason("");
+    setCorrectionMessage("");
+    setCorrectionError("");
+    setReplacementPage(1);
+  }, [id]);
 
   const q = useQuery({
     queryKey: ["credentials", id],
@@ -1497,6 +1892,53 @@ export function CredentialDetail() {
 
   const c = (q.data || {}) as JsonRecord;
 
+  const canSupersede = c.status === "active" &&
+    ["super_admin", "institution_admin", "issuer"].includes(user?.role || "");
+  const replacements = useQuery({
+    queryKey: ["credentials", "replacement-candidates", id, c.student_id, c.institution_id, replacementPage],
+    enabled: Boolean(q.data && c.student_id && canSupersede && supersedeOpen),
+    queryFn: async () => (await api.get("/credentials", {
+      params: {
+        studentId: c.student_id,
+        institutionId: c.institution_id,
+        status: "active",
+        page: replacementPage,
+        limit: 100,
+      },
+    })).data,
+  });
+  const candidates = ((replacements.data?.credentials || []) as JsonRecord[]).filter(
+    (candidate) => candidate.id !== id && candidate.status === "active" &&
+      candidate.student_id === c.student_id && candidate.institution_id === c.institution_id
+  );
+  const supersede = useMutation({
+    mutationFn: () => api.patch(`/credentials/${id}/supersede`, {
+      replacementCredentialId,
+      reason: supersessionReason.trim(),
+    }, {
+      // Signed status publication anchors on-chain, as with revocation.
+      timeout: 120000,
+    }),
+    onSuccess: () => {
+      setSupersedeOpen(false);
+      setReplacementCredentialId("");
+      setSupersessionReason("");
+      setCorrectionError("");
+      setCorrectionMessage("Credential superseded successfully. The replacement remains the current credential.");
+      void qc.invalidateQueries({ queryKey: ["credentials", id] });
+      void qc.invalidateQueries({ queryKey: ["credentials"] });
+      void qc.invalidateQueries({ queryKey: ["my-credentials"] });
+    },
+    onError: (error: { message?: string }) => {
+      setCorrectionError(error.message || "Unable to supersede credential.");
+    },
+  });
+
+  const publicToken =
+    typeof c.public_token === "string"
+      ? c.public_token
+      : "";
+
   const explorer = String(
     import.meta.env.VITE_BLOCK_EXPLORER_URL || ""
   ).replace(/\/$/, "");
@@ -1558,13 +2000,32 @@ export function CredentialDetail() {
             )}
           </dl>
 
-          {Boolean(c.public_token) ? (
-            <CredentialPublicVerification
-              publicToken={String(
-                c.public_token
+          {c.status === "superseded" && (
+            <section aria-label="Supersession history" className="notice">
+              <p>This credential has been superseded and is no longer the current credential.</p>
+              <dl>
+                <div><dt>Superseded at</dt><dd>{String(c.superseded_at || "Not available")}</dd></div>
+                <div><dt>Supersession reason</dt><dd>{String(c.supersession_reason || "Not available")}</dd></div>
+                <div><dt>Replacement credential</dt><dd>{String(c.superseded_by || "Not available")}</dd></div>
+              </dl>
+              {typeof c.superseded_by === "string" && c.superseded_by && (
+                <Link to={`/app/credentials/${encodeURIComponent(c.superseded_by)}`}>Open replacement credential</Link>
               )}
+            </section>
+          )}
+          {typeof c.supersedes_credential_id === "string" && c.supersedes_credential_id && (
+            <section aria-label="Original credential" className="notice">
+              <p>This credential is the replacement for a previous credential.</p>
+              <p>Original credential: {c.supersedes_credential_id}</p>
+              <Link to={`/app/credentials/${encodeURIComponent(c.supersedes_credential_id)}`}>Open original credential</Link>
+            </section>
+          )}
+
+          {publicToken ? (
+            <CredentialPublicVerification
+              publicToken={publicToken}
             />
-          ) : c.status === "active" ? (
+          ) : String(c.status) === "active" ? (
             <div
               className="notice error"
               role="alert"
@@ -1612,7 +2073,13 @@ export function CredentialDetail() {
               </a>
             )}
 
-            {user?.role !== "verifier" && (
+            {[
+              "super_admin",
+              "institution_admin",
+              "issuer",
+            ].includes(
+              user?.role || ""
+            ) && (
               <Button
                 onClick={() =>
                   pdf.mutate()
@@ -1655,6 +2122,18 @@ export function CredentialDetail() {
               )}
           </div>
 
+          {canSupersede && (
+            <Button disabled={supersede.isPending || revoke.isPending} onClick={() => {
+              setReplacementCredentialId("");
+              setSupersessionReason("");
+              setCorrectionError("");
+              setCorrectionMessage("");
+              setReplacementPage(1);
+              setSupersedeOpen(true);
+            }}>Correct / supersede credential</Button>
+          )}
+          {correctionMessage && <div className="notice success" role="status">{correctionMessage}</div>}
+
           {pdf.isSuccess && (
             <div className="notice success">
               Certificate generation confirmed by the API.
@@ -1686,6 +2165,84 @@ export function CredentialDetail() {
           )}
         </Card>
       </State>
+
+      <ConfirmDialog
+        open={supersedeOpen}
+        title="Correct / supersede this credential?"
+        onCancel={() => {
+          if (supersede.isPending) return;
+          setSupersedeOpen(false);
+          setReplacementCredentialId("");
+          setSupersessionReason("");
+          setCorrectionError("");
+        }}
+        onConfirm={() => {
+          if (!replacementCredentialId || supersessionReason.trim().length < 5 || supersede.isPending) return;
+          supersede.mutate();
+        }}
+      >
+        <p>
+          This action marks the current credential as SUPERSEDED.
+          The selected replacement remains the current credential.
+          The old credential is retained for audit and verification history.
+        </p>
+        <label>
+          Replacement credential
+          <select
+            aria-label="Replacement credential"
+            value={replacementCredentialId}
+            disabled={replacements.isLoading || supersede.isPending}
+            onChange={(event) => setReplacementCredentialId(event.target.value)}
+          >
+            <option value="">Select an active replacement</option>
+            {candidates.map((candidate) => (
+              <option key={String(candidate.id)} value={String(candidate.id)}>
+                {String(candidate.qualification || "Credential")} —{" "}
+                {String(candidate.issue_date || "").slice(0, 10)} —{" "}
+                {String(candidate.id)}
+              </option>
+            ))}
+          </select>
+        </label>
+        {replacements.isLoading && (
+          <div className="notice">Loading eligible replacement credentials…</div>
+        )}
+        {!replacements.isLoading && !replacements.error && candidates.length === 0 && (
+          <div className="notice">
+            No other active credential is currently available for this student.
+            Issue the corrected credential first, then return here to link it as
+            the replacement.
+          </div>
+        )}
+        {replacements.error && (
+          <div className="notice error" role="alert">
+            {(replacements.error as { message?: string }).message ||
+              "Unable to load replacement credentials."}
+          </div>
+        )}
+        <label>
+          Correction / supersession reason
+          <textarea
+            aria-label="Supersession reason"
+            value={supersessionReason}
+            minLength={5}
+            maxLength={1000}
+            required
+            onChange={(event) => setSupersessionReason(event.target.value)}
+          />
+        </label>
+        {supersessionReason.length > 0 && supersessionReason.trim().length < 5 && (
+          <div className="notice error">Supersession reason must be at least 5 characters.</div>
+        )}
+        {supersede.isPending && (
+          <div className="notice">
+            Publishing the supersession status and waiting for confirmation…
+          </div>
+        )}
+        {correctionError && (
+          <div className="notice error" role="alert">{correctionError}</div>
+        )}
+      </ConfirmDialog>
 
       <ConfirmDialog
         open={open}
@@ -1920,6 +2477,7 @@ export function UserDetail() {
     actor?.role === "super_admin"
       ? [
           "super_admin",
+          "regulator",
           "institution_admin",
           "issuer",
           "verifier",
@@ -2137,8 +2695,9 @@ export function UserDetail() {
 
             {actor?.role ===
               "super_admin" &&
-              target.role !==
-                "super_admin" && (
+              !["super_admin", "regulator"].includes(
+                String(target.role || "")
+              ) && (
                 <label>
                   Institution
 

@@ -271,7 +271,7 @@ const create = async (req, res) => {
   }
 
   const effectiveInstitution =
-    role === ROLES.SUPER_ADMIN
+    [ROLES.SUPER_ADMIN, ROLES.REGULATOR].includes(role)
       ? null
       : req.user.role ===
           ROLES.INSTITUTION_ADMIN
@@ -279,7 +279,7 @@ const create = async (req, res) => {
       : institutionId || null;
 
   if (
-    role !== ROLES.SUPER_ADMIN &&
+    ![ROLES.SUPER_ADMIN, ROLES.REGULATOR].includes(role) &&
     !UUID.test(effectiveInstitution || "")
   ) {
     return respond(
@@ -580,7 +580,7 @@ const changeRole = async (req, res) => {
   }
 
   const institutionId =
-    role === ROLES.SUPER_ADMIN
+    [ROLES.SUPER_ADMIN, ROLES.REGULATOR].includes(role)
       ? null
       : req.user.role ===
           ROLES.SUPER_ADMIN
@@ -589,7 +589,7 @@ const changeRole = async (req, res) => {
       : result.target.institution_id;
 
   if (
-    role !== ROLES.SUPER_ADMIN &&
+    ![ROLES.SUPER_ADMIN, ROLES.REGULATOR].includes(role) &&
     !institutionId
   ) {
     return respond(
@@ -599,7 +599,7 @@ const changeRole = async (req, res) => {
     );
   }
 
-  if (role !== ROLES.SUPER_ADMIN) {
+  if (![ROLES.SUPER_ADMIN, ROLES.REGULATOR].includes(role)) {
     const institution =
       await getInstitutionById(
         institutionId
@@ -663,8 +663,7 @@ const assignInstitution = async (
   }
 
   if (
-    result.target.role ===
-    ROLES.SUPER_ADMIN
+    [ROLES.SUPER_ADMIN, ROLES.REGULATOR].includes(result.target.role)
   ) {
     return respond(
       res,

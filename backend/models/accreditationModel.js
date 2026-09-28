@@ -257,7 +257,32 @@ const updateAccreditationStatus =
     return result.rows[0];
   };
 
+// Metadata changes deliberately cannot alter issuer, programme or award validity.
+// The row and its before/after audit entry commit atomically.
+const updateAccreditationMetadata = async (id, sourceLabel, actor) => {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const before = (await client.query("SELECT * FROM institution_accreditations WHERE id = $1 FOR UPDATE", [id])).rows[0];
+    if (!before) { await client.query("ROLLBACK"); return null; }
+    const after = (await client.query("UPDATE institution_accreditations SET source_label = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *", [id, sourceLabel])).rows[0];
+    await client.query(`INSERT INTO audit_logs (user_id, institution_id, action, entity_type, entity_id, details, ip_address, user_agent)
+      VALUES ($1,$2,'ACCREDITATION_RECORD_UPDATED','institution_accreditation',$3,$4::jsonb,$5,$6)`,
+      [actor.userId, before.institution_id, id, JSON.stringify({ before: { sourceLabel: before.source_label }, after: { sourceLabel } }), actor.ipAddress, actor.userAgent]);
+    await client.query("COMMIT");
+    return after;
+  } catch (error) { await client.query("ROLLBACK"); throw error; }
+  finally { client.release(); }
+};
+const listAccreditationHistory = async (id, limit = 20, offset = 0) => (await pool.query(
+  `SELECT id, action, details, created_at FROM audit_logs
+   WHERE entity_type = 'institution_accreditation' AND entity_id = $1
+     AND action IN ('ACCREDITATION_RECORD_CREATED','ACCREDITATION_RECORD_UPDATED','ACCREDITATION_STATUS_CHANGED')
+   ORDER BY created_at DESC, id DESC LIMIT $2 OFFSET $3`, [id, limit, offset])).rows;
+
 module.exports = {
+  updateAccreditationMetadata,
+  listAccreditationHistory,
   createAccreditation,
   getAccreditationById,
   findEffectiveAccreditation,

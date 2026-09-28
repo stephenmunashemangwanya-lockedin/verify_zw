@@ -28,6 +28,12 @@ const {
   "../backend/services/credentialProofService"
 );
 
+const INSTITUTION_ID =
+  "22222222-2222-4222-8222-222222222222";
+
+const OTHER_INSTITUTION_ID =
+  "33333333-3333-4333-8333-333333333333";
+
 const buildSignedStatus =
   async ({
     revokedIndices = [],
@@ -35,32 +41,38 @@ const buildSignedStatus =
       "2026-09-18T10:00:00.000Z",
     nextUpdate =
       "2026-09-19T10:00:00.000Z",
+    institutionId =
+      INSTITUTION_ID,
+    transformPayload = null,
   } = {}) => {
     const wallet =
       Wallet.createRandom();
 
-    const payload =
+    let payload =
       buildStatusListPayload({
-        institutionId:
-          "22222222-2222-4222-8222-222222222222",
-
+        institutionId,
         version:
           3,
-
         revokedIndices,
-
         issuedAt,
-
         nextUpdate,
       });
+
+    if (
+      typeof transformPayload ===
+      "function"
+    ) {
+      payload =
+        transformPayload(
+          payload
+        );
+    }
 
     const signed =
       await signCredentialPayload({
         payload,
-
         signer:
           wallet,
-
         expectedIssuerWallet:
           wallet.address,
       });
@@ -116,6 +128,9 @@ test(
         expectedInstitutionWallet:
           wallet.address,
 
+        expectedInstitutionId:
+          INSTITUTION_ID,
+
         statusListIndex:
           12,
 
@@ -169,6 +184,9 @@ test(
         expectedInstitutionWallet:
           wallet.address,
 
+        expectedInstitutionId:
+          INSTITUTION_ID,
+
         statusListIndex:
           12,
 
@@ -215,6 +233,65 @@ test(
 
         expectedInstitutionWallet:
           wallet.address,
+
+        expectedInstitutionId:
+          INSTITUTION_ID,
+
+        statusListIndex:
+          12,
+
+        now:
+          new Date(
+            "2026-09-19T10:00:01.000Z"
+          ),
+      });
+
+    assert.equal(
+      result.signatureValid,
+      true
+    );
+
+    assert.equal(
+      result.fresh,
+      false
+    );
+
+    assert.equal(
+      result.revoked,
+      null
+    );
+  }
+);
+
+test(
+  "far-future validUntil cannot extend freshness beyond 24 hours",
+  async () => {
+    const {
+      wallet,
+      payload,
+      signed,
+    } =
+      await buildSignedStatus({
+        issuedAt:
+          "2026-09-18T10:00:00.000Z",
+
+        nextUpdate:
+          "2026-09-25T10:00:00.000Z",
+      });
+
+    const result =
+      verifyStatusListArtifact({
+        payload,
+
+        signature:
+          signed.proof
+            .signature,
+
+        expectedInstitutionWallet:
+          wallet.address,
+
+        expectedInstitutionId:
+          INSTITUTION_ID,
 
         statusListIndex:
           12,
@@ -277,6 +354,9 @@ test(
         expectedInstitutionWallet:
           wallet.address,
 
+        expectedInstitutionId:
+          INSTITUTION_ID,
+
         statusListIndex:
           12,
 
@@ -289,6 +369,183 @@ test(
     assert.equal(
       result.signatureValid,
       false
+    );
+
+    assert.equal(
+      result.fresh,
+      false
+    );
+
+    assert.equal(
+      result.revoked,
+      null
+    );
+  }
+);
+
+test(
+  "status artefact signed by the wrong institution wallet is rejected",
+  async () => {
+    const {
+      payload,
+      signed,
+    } =
+      await buildSignedStatus();
+
+    const differentWallet =
+      Wallet.createRandom();
+
+    const result =
+      verifyStatusListArtifact({
+        payload,
+
+        signature:
+          signed.proof
+            .signature,
+
+        expectedInstitutionWallet:
+          differentWallet.address,
+
+        expectedInstitutionId:
+          INSTITUTION_ID,
+
+        statusListIndex:
+          12,
+
+        now:
+          new Date(
+            "2026-09-18T15:00:00.000Z"
+          ),
+      });
+
+    assert.equal(
+      result.signatureValid,
+      false
+    );
+
+    assert.equal(
+      result.fresh,
+      false
+    );
+
+    assert.equal(
+      result.revoked,
+      null
+    );
+  }
+);
+
+test(
+  "status artefact bound to another institution is not accepted as fresh",
+  async () => {
+    const {
+      wallet,
+      payload,
+      signed,
+    } =
+      await buildSignedStatus();
+
+    const result =
+      verifyStatusListArtifact({
+        payload,
+
+        signature:
+          signed.proof
+            .signature,
+
+        expectedInstitutionWallet:
+          wallet.address,
+
+        expectedInstitutionId:
+          OTHER_INSTITUTION_ID,
+
+        statusListIndex:
+          12,
+
+        now:
+          new Date(
+            "2026-09-18T15:00:00.000Z"
+          ),
+      });
+
+    assert.equal(
+      result.signatureValid,
+      true
+    );
+
+    assert.equal(
+      result.fresh,
+      false
+    );
+
+    assert.equal(
+      result.revoked,
+      null
+    );
+  }
+);
+
+test(
+  "validly signed malformed status schema is rejected as non-fresh",
+  async () => {
+    const {
+      wallet,
+      payload,
+      signed,
+    } =
+      await buildSignedStatus({
+        transformPayload:
+          (
+            original
+          ) => ({
+            ...original,
+
+            credentialSubject: {
+              ...original
+                .credentialSubject,
+
+              statusPurpose:
+                "suspension",
+            },
+          }),
+      });
+
+    const result =
+      verifyStatusListArtifact({
+        payload,
+
+        signature:
+          signed.proof
+            .signature,
+
+        expectedInstitutionWallet:
+          wallet.address,
+
+        expectedInstitutionId:
+          INSTITUTION_ID,
+
+        statusListIndex:
+          12,
+
+        now:
+          new Date(
+            "2026-09-18T15:00:00.000Z"
+          ),
+      });
+
+    assert.equal(
+      result.signatureValid,
+      true
+    );
+
+    assert.equal(
+      result.fresh,
+      false
+    );
+
+    assert.equal(
+      result.revoked,
+      null
     );
   }
 );

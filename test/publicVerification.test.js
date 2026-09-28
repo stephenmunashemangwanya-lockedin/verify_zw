@@ -63,6 +63,53 @@ const baseCredential = {
     "Test University",
 };
 
+const verificationTime = new Date("2026-09-19T12:00:00.000Z");
+
+const makeSignedFixture = async () => {
+  const { Wallet } = require("ethers");
+  const { buildStructuredCredentialPayload } = require("../backend/services/structuredCredentialService");
+  const { buildStatusListPayload } = require("../backend/services/statusListService");
+  const { signCredentialPayload } = require("../backend/services/credentialProofService");
+  const wallet = Wallet.createRandom();
+  const credential = {
+    ...baseCredential,
+    institution_id: "22222222-2222-4222-8222-222222222222",
+    student_id: "33333333-3333-4333-8333-333333333333",
+    award_date: "2026-07-31",
+    status_list_index: 0,
+    proof_version: "structured-v2",
+    issuer_wallet: wallet.address,
+    institution_wallet: wallet.address,
+  };
+  const payload = buildStructuredCredentialPayload({
+    credentialId: credential.id, institutionId: credential.institution_id,
+    studentId: credential.student_id, studentNumber: credential.student_number,
+    qualification: credential.qualification, programme: credential.programme,
+    awardDate: credential.award_date, issueDate: credential.issue_date,
+    statusListIndex: credential.status_list_index,
+  });
+  const signed = await signCredentialPayload({ payload, signer: wallet });
+  Object.assign(credential, {
+    credential_payload: payload,
+    credential_commitment: signed.commitmentHash,
+    issuer_signature: signed.proof.signature,
+  });
+  const statusPayload = buildStatusListPayload({
+    institutionId: credential.institution_id, version: 1, revokedIndices: [],
+    issuedAt: "2026-09-19T08:00:00.000Z",
+    nextUpdate: "2026-09-20T08:00:00.000Z",
+  });
+  const signedStatus = await signCredentialPayload({ payload: statusPayload, signer: wallet });
+  return {
+    credential,
+    blockchain: { exists: true, revoked: false, issuer: wallet.address },
+    statusList: {
+      payload: statusPayload, signature: signedStatus.proof.signature,
+      commitment: signedStatus.commitmentHash,
+    },
+  };
+};
+
 const loadService = ({
   blockchain = {
     exists: true,
@@ -70,6 +117,7 @@ const loadService = ({
   },
 
   pinned = true,
+  statusList = null,
 } = {}) => {
   const blockchainPath =
     require.resolve(
@@ -110,20 +158,37 @@ const loadService = ({
 
   delete require.cache[servicePath];
 
+  for (const [modulePath, exports] of [
+    ["../backend/models/statusListModel", { getLatestStatusList: async () => statusList }],
+    ["../backend/models/accreditationModel", {
+      findEffectiveAccreditation: async () => ({
+        id: "55555555-5555-4555-8555-555555555555",
+        programme: baseCredential.programme,
+        valid_from: "2025-01-01", valid_to: "2027-12-31",
+      }),
+    }],
+  ]) {
+    const filename = require.resolve(modulePath);
+    require.cache[filename] = { id: filename, filename, loaded: true, exports };
+  }
+
   return require(servicePath);
 };
 
 test(
   "active database and blockchain credential is VERIFIED",
   async () => {
+    const fixture = await makeSignedFixture();
     const {
       verifyCredentialState,
-    } = loadService();
+    } = loadService(fixture);
 
     const result =
       await verifyCredentialState({
         credential:
-          baseCredential,
+          fixture.credential,
+
+        verificationTime,
 
         certificateHash:
           HASH,
@@ -313,16 +378,19 @@ test(
 test(
   "active credential missing IPFS CID is inconsistent",
   async () => {
+    const fixture = await makeSignedFixture();
     const {
       verifyCredentialState,
-    } = loadService();
+    } = loadService(fixture);
 
     const result =
       await verifyCredentialState({
         credential: {
-          ...baseCredential,
+          ...fixture.credential,
           ipfs_cid: null,
         },
+
+        verificationTime,
 
         certificateHash:
           HASH,

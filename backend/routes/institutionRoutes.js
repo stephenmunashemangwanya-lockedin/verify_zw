@@ -27,6 +27,7 @@ router.get(
   "/",
   authorizeRoles(
     "super_admin",
+    "regulator",
     "institution_admin",
     "issuer",
     "verifier"
@@ -39,6 +40,7 @@ router.get(
   "/:id",
   authorizeRoles(
     "super_admin",
+    "regulator",
     "institution_admin",
     "issuer",
     "verifier"

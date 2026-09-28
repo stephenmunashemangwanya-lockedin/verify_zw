@@ -6,7 +6,7 @@ const { authenticate, requireCurrentUser, authorizeRoles } = require("../middlew
 const { sensitiveNoStore } = require("../middleware/securityMiddleware");
 const router = express.Router();
 router.use(authenticate, requireCurrentUser, sensitiveNoStore);
-router.get("/summary", validate({ query: schemas.summary }), controller.summary);
+router.get("/summary", authorizeRoles("super_admin", "institution_admin", "issuer", "verifier"), validate({ query: schemas.summary }), controller.summary);
 router.get("/recent-activity", authorizeRoles("super_admin", "institution_admin", "issuer"), validate({ query: schemas.recentActivity }), controller.recentActivity);
 router.get("/credential-trends", authorizeRoles("super_admin", "institution_admin", "issuer"), validate({ query: schemas.trend }), controller.credentialTrends);
 router.get("/verification-trends", authorizeRoles("super_admin", "institution_admin", "issuer", "verifier"), validate({ query: schemas.verificationTrend }), controller.verificationTrends);

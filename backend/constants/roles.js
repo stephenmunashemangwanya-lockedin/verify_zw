@@ -1,4 +1,5 @@
 const ROLES = Object.freeze({
+  REGULATOR: "regulator",
   SUPER_ADMIN: "super_admin",
   INSTITUTION_ADMIN: "institution_admin",
   ISSUER: "issuer",

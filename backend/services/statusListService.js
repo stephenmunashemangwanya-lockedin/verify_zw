@@ -180,6 +180,7 @@ const verifyStatusListArtifact =
     signature,
     expectedInstitutionWallet,
     statusListIndex,
+    expectedInstitutionId,
     now =
       new Date(),
   }) => {
@@ -234,8 +235,22 @@ const verifyStatusListArtifact =
         nextUpdate.getTime()
       );
 
+    const subject = payload?.credentialSubject;
+    const indexValid = /^(0|[1-9]\d*)$/.test(String(statusListIndex ?? "")) && Number.isSafeInteger(Number(statusListIndex));
+    const institutionId = expectedInstitutionId || String(payload?.issuer || "").replace("urn:verifyzw:institution:", "");
+    const schemaValid = Boolean(institutionId &&
+      Array.isArray(payload?.['@context']) && payload['@context'].includes('https://www.w3.org/ns/credentials/v2') &&
+      Array.isArray(payload?.type) && payload.type.includes('VerifyZWStatusListCredential') &&
+      payload.issuer === `urn:verifyzw:institution:${institutionId}` &&
+      subject?.id === `urn:verifyzw:status:${institutionId}#list` &&
+      subject.type === 'VerifyZWStatusList' && subject.statusPurpose === 'revocation' &&
+      Number.isSafeInteger(subject.version) && subject.version > 0 &&
+      payload.id === `urn:verifyzw:status:${institutionId}:v${subject.version}` &&
+      Array.isArray(subject.revokedIndices) && subject.revokedIndices.every(value => Number.isSafeInteger(value) && value >= 0));
     const fresh =
-      timesValid &&
+      schemaValid && indexValid && timesValid &&
+      currentTime.getTime() - issuedAt.getTime() <= DEFAULT_FRESHNESS_HOURS * 3600000 &&
+      nextUpdate > issuedAt &&
       currentTime >=
         issuedAt &&
       currentTime <=
