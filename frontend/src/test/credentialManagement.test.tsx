@@ -388,9 +388,16 @@ describe(
       );
     });
 
-    it(
-      "renders human-readable detail and safe evidence links",
-      async () => {
+    it("renders human-readable detail and safe evidence links", async () => {
+    vi.stubEnv(
+      "VITE_IPFS_GATEWAY",
+      "https://ipfs.example.test/ipfs"
+    );
+
+    vi.stubEnv(
+      "VITE_BLOCK_EXPLORER_URL",
+      "https://explorer.example.test"
+    );
         render(
           wrapper(
             <CredentialDetail />

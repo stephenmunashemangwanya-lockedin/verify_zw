@@ -8,6 +8,7 @@ const {
 const {
   authoriseInstitution,
   deactivateInstitution,
+  isInstitutionAuthorised,
 } = require("../services/blockchainService");
 const { createAuditLog } = require("../models/auditModel");
 const { paginationFromQuery, buildPaginationMetadata } = require("../utils/pagination");
@@ -198,6 +199,64 @@ const updateBlockchainAuthorisation = async (req, res, action) => {
   }
 };
 
+const blockchainStatus = async (req, res) => {
+  try {
+    const institution =
+      await getInstitutionById(
+        req.params.id
+      );
+
+    if (!institution) {
+      return res.status(404).json({
+        success: false,
+        message:
+          "Institution not found.",
+      });
+    }
+
+    const authorised =
+      await isInstitutionAuthorised(
+        institution.wallet_address
+      );
+
+    return res.status(200).json({
+      success: true,
+      institutionId:
+        institution.id,
+      walletAddress:
+        institution.wallet_address,
+      authorised,
+    });
+  } catch (error) {
+    require("../utils/logger").log(
+      "error",
+      "institution_blockchain_status_failed",
+      {
+        errorCode:
+          error.code ||
+          "BLOCKCHAIN_STATUS_ERROR",
+      }
+    );
+
+    return res
+      .status(
+        error.statusCode ||
+          500
+      )
+      .json({
+        success: false,
+        message:
+          error.statusCode ===
+          503
+            ? "The blockchain network is temporarily unavailable."
+            : error.statusCode ===
+                400
+              ? "The institution wallet address is invalid."
+              : "Unable to retrieve institution blockchain authorisation status.",
+      });
+  }
+};
+
 const authoriseOnBlockchain = (req, res) => updateBlockchainAuthorisation(req, res, "authorise");
 const deactivateOnBlockchain = (req, res) => updateBlockchainAuthorisation(req, res, "deactivate");
 
@@ -206,6 +265,8 @@ module.exports = {
   list,
   getOne,
   changeStatus,
+
+  blockchainStatus,
   authoriseOnBlockchain,
   deactivateOnBlockchain,
 };

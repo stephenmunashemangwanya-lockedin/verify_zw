@@ -71,10 +71,7 @@ router.get(
 router.post(
   "/",
 
-  authorizeRoles(
-    "regulator",
-    "super_admin"
-  ),
+  authorizeRoles("regulator"),
 
   adminActionLimiter,
 
@@ -89,10 +86,7 @@ router.post(
 router.patch(
   "/:id/status",
 
-  authorizeRoles(
-    "regulator",
-    "super_admin"
-  ),
+  authorizeRoles("regulator"),
 
   adminActionLimiter,
 
@@ -107,7 +101,7 @@ router.patch(
   changeStatus
 );
 
-router.patch("/:id", authorizeRoles("super_admin", "regulator"), adminActionLimiter,
+router.patch("/:id", authorizeRoles("regulator"), adminActionLimiter,
   validate({ params: schemas.idParams, body: schemas.metadata }), amendMetadata);
 router.get("/:id/history", authorizeRoles("super_admin", "regulator"),
   validate({ params: schemas.idParams, query: schemas.historyQuery }), history);

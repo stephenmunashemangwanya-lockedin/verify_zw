@@ -5,7 +5,8 @@ const {
   list,
   getOne,
   changeStatus,
-  authoriseOnBlockchain,
+
+  blockchainStatus,authoriseOnBlockchain,
   deactivateOnBlockchain,
 } = require("../controllers/institutionController");
 
@@ -62,6 +63,16 @@ router.patch(
   adminActionLimiter,
   validate({ params: schemas.idParams, body: schemas.status }),
   changeStatus
+);
+
+router.get(
+  "/:id/blockchain/status",
+  authorizeRoles("super_admin"),
+  validate({
+    params:
+      schemas.idParams,
+  }),
+  blockchainStatus
 );
 
 router.post(

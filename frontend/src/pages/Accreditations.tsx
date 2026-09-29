@@ -19,11 +19,16 @@ import {
   State,
 } from "../components/ui";
 
+import { useAuth } from "../context/AuthContext";
+
 import type {
   JsonRecord,
 } from "../types";
 
 export function AccreditationsPage() {
+  const { user } = useAuth();
+  const canManageAccreditation =
+    user?.role === "regulator";
   const queryClient =
     useQueryClient();
 
@@ -37,12 +42,17 @@ export function AccreditationsPage() {
     setError,
   ] = useState("");
 
+  const [page, setPage] =
+    useState(1);
+
+
   const institutions =
     useQuery({
       queryKey: [
         "institutions",
         "accreditation-management",
       ],
+      enabled: canManageAccreditation,
 
       queryFn:
         async () =>
@@ -64,6 +74,7 @@ export function AccreditationsPage() {
     useQuery({
       queryKey: [
         "accreditations",
+        page,
       ],
 
       queryFn:
@@ -73,8 +84,9 @@ export function AccreditationsPage() {
               "/accreditations",
               {
                 params: {
-                  limit: 100,
-                  offset: 0,
+                  limit: 20,
+                  offset:
+                    (page - 1) * 20,
                 },
               }
             )
@@ -238,12 +250,71 @@ export function AccreditationsPage() {
         },
     });
 
+  const history =
+    useMutation({
+      mutationFn:
+        async (
+          id: string
+        ) =>
+          (
+            await api.get(
+              `/accreditations/${id}/history`
+            )
+          ).data as {
+            history?: JsonRecord[];
+          },
+
+      onMutate:
+        () => {
+          setError("");
+        },
+
+      onError:
+        (
+          value: {
+            message?: string;
+            response?: {
+              data?: {
+                message?: string;
+              };
+            };
+          }
+        ) => {
+          setError(
+            value.response
+              ?.data
+              ?.message ||
+              value.message ||
+              "Unable to load accreditation history."
+          );
+        },
+    });
+
   const rows =
     (
       accreditations.data
         ?.accreditations ||
       []
     ) as JsonRecord[];
+
+  const accreditationTotal =
+    Number(
+      accreditations.data
+        ?.total ??
+      rows.length
+    );
+
+  const hasNextPage =
+    page * 20 <
+    accreditationTotal;
+
+  const historyRows =
+    (
+      history.data
+        ?.history ||
+      []
+    ) as JsonRecord[];
+
 
   return (
     <div className="page">
@@ -275,7 +346,8 @@ export function AccreditationsPage() {
       </div>
 
       <div className="grid two">
-        <Card title="Create accreditation record">
+        {canManageAccreditation && (
+<Card title="Create accreditation record">
           <form
             onSubmit={(
               event
@@ -394,6 +466,7 @@ export function AccreditationsPage() {
             </Button>
           </form>
         </Card>
+        )}
 
         <Card title="Decision rule">
           <p>
@@ -487,6 +560,10 @@ export function AccreditationsPage() {
                   <th>
                     Change status
                   </th>
+
+                  <th>
+                    History
+                  </th>
                 </tr>
               </thead>
 
@@ -552,7 +629,8 @@ export function AccreditationsPage() {
                       </td>
 
                       <td>
-                        <select
+                        {canManageAccreditation ? (
+                          <select
                           aria-label={`Status for ${String(
                             row.institution_name ||
                               row.id
@@ -594,6 +672,26 @@ export function AccreditationsPage() {
                             Revoked
                           </option>
                         </select>
+                        ) : (
+                          <span>Read only</span>
+                        )}
+                      </td>
+
+                      <td>
+                        <Button
+                          disabled={
+                            history.isPending
+                          }
+                          onClick={() =>
+                            history.mutate(
+                              String(
+                                row.id
+                              )
+                            )
+                          }
+                        >
+                          View history
+                        </Button>
                       </td>
                     </tr>
                   )
@@ -601,8 +699,99 @@ export function AccreditationsPage() {
               </tbody>
             </table>
           </div>
+
+          <div className="actions">
+            <Button
+              disabled={
+                page <= 1
+              }
+              onClick={() =>
+                setPage(
+                  (current) =>
+                    Math.max(
+                      1,
+                      current - 1
+                    )
+                )
+              }
+            >
+              Previous records
+            </Button>
+
+            <Button
+              disabled={
+                !hasNextPage
+              }
+              onClick={() =>
+                setPage(
+                  (current) =>
+                    current + 1
+                )
+              }
+            >
+              Next records
+            </Button>
+          </div>
         </State>
       </Card>
+
+      {(history.isPending ||
+        historyRows.length > 0) && (
+        <Card title="Accreditation history">
+          {history.isPending ? (
+            <p>
+              Loading history?
+            </p>
+          ) : (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>
+                      Action
+                    </th>
+
+                    <th>
+                      Date
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {historyRows.map(
+                    (
+                      item
+                    ) => (
+                      <tr
+                        key={String(
+                          item.id
+                        )}
+                      >
+                        <td>
+                          {String(
+                            item.action ||
+                              "UNKNOWN"
+                          ).replaceAll(
+                            "_",
+                            " "
+                          )}
+                        </td>
+
+                        <td>
+                          {String(
+                            item.created_at ||
+                              ""
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      )}
     </div>
   );
 }

@@ -60,127 +60,537 @@ const responseKey: Record<Kind, string> = {
   "audit-logs": "auditLogs",
 };
 
-export function ManagementPage({ kind }: { kind: Kind }) {
-  return <ManagementList key={kind} kind={kind} />;
+export function ManagementPage({
+  kind,
+}: {
+  kind: Kind;
+}) {
+  return (
+    <ManagementList
+      key={kind}
+      kind={kind}
+    />
+  );
 }
 
-function ManagementList({ kind }: { kind: Kind }) {
+
+function InstitutionBlockchainControl({
+  record,
+  onMessage,
+  onError,
+}: {
+  record: JsonRecord;
+  onMessage: (message: string) => void;
+  onError: (message: string) => void;
+}) {
+  const institutionId =
+    String(record.id);
+
+  const [
+    localAuthorised,
+    setLocalAuthorised,
+  ] = useState<boolean | null>(
+    null
+  );
+
+  const blockchainStatus =
+    useQuery({
+      queryKey: [
+        "institution-blockchain-status",
+        institutionId,
+      ],
+
+      queryFn:
+        async () =>
+          (
+            await api.get(
+              `/institutions/${institutionId}/blockchain/status`
+            )
+          ).data as {
+            authorised?: boolean;
+          },
+
+      retry: false,
+    });
+
+  const authorise =
+    useMutation({
+      mutationFn:
+        async () =>
+          api.post(
+            `/institutions/${institutionId}/blockchain/authorise`,
+            {},
+            {
+              timeout: 120000,
+            }
+          ),
+
+      onMutate:
+        () => {
+          onMessage("");
+          onError("");
+        },
+
+      onSuccess:
+        (response) => {
+          setLocalAuthorised(
+            true
+          );
+
+          onError("");
+
+          onMessage(
+            response.data
+              ?.message ||
+              "Institution blockchain wallet authorised successfully."
+          );
+        },
+
+      onError:
+        (
+          value: {
+            message?: string;
+            response?: {
+              data?: {
+                message?: string;
+              };
+            };
+          }
+        ) => {
+          onError(
+            value.response
+              ?.data
+              ?.message ||
+              value.message ||
+              "Institution blockchain authorisation failed."
+          );
+        },
+    });
+
+  const deactivate =
+    useMutation({
+      mutationFn:
+        async () =>
+          api.post(
+            `/institutions/${institutionId}/blockchain/deactivate`,
+            {},
+            {
+              timeout: 120000,
+            }
+          ),
+
+      onMutate:
+        () => {
+          onMessage("");
+          onError("");
+        },
+
+      onSuccess:
+        (response) => {
+          setLocalAuthorised(
+            false
+          );
+
+          onError("");
+
+          onMessage(
+            response.data
+              ?.message ||
+              "Institution blockchain wallet deactivated successfully."
+          );
+        },
+
+      onError:
+        (
+          value: {
+            message?: string;
+            response?: {
+              data?: {
+                message?: string;
+              };
+            };
+          }
+        ) => {
+          onError(
+            value.response
+              ?.data
+              ?.message ||
+              value.message ||
+              "Institution blockchain deactivation failed."
+          );
+        },
+    });
+
+  if (
+    blockchainStatus.isLoading
+  ) {
+    return (
+      <span>
+        Checking blockchain status...
+      </span>
+    );
+  }
+
+  if (
+    blockchainStatus.isError
+  ) {
+    return (
+      <Button disabled>
+        Blockchain status unavailable
+      </Button>
+    );
+  }
+
+  const authorised =
+    localAuthorised ??
+    blockchainStatus.data
+      ?.authorised === true;
+
+  if (
+    authorised
+  ) {
+    return (
+      <Button
+        disabled={
+          deactivate.isPending
+        }
+        onClick={() => {
+          const confirmed =
+            window.confirm(
+              `Deactivate ${String(
+                record.name
+              )} on Sepolia?`
+            );
+
+          if (
+            confirmed
+          ) {
+            deactivate.mutate();
+          }
+        }}
+      >
+        {deactivate.isPending
+          ? "Deactivating..."
+          : "Deactivate on blockchain"}
+      </Button>
+    );
+  }
+
+  return (
+    <Button
+      disabled={
+        authorise.isPending
+      }
+      onClick={() => {
+        const confirmed =
+          window.confirm(
+            `Authorise ${String(
+              record.name
+            )} to issue credentials on Sepolia?`
+          );
+
+        if (
+          confirmed
+        ) {
+          authorise.mutate();
+        }
+      }}
+    >
+      {authorise.isPending
+        ? "Authorising..."
+        : "Authorise on blockchain"}
+    </Button>
+  );
+}
+
+function InstitutionPlatformAction({
+  record,
+  onMessage,
+  onError,
+  onChanged,
+}: {
+  record: JsonRecord;
+  onMessage: (message: string) => void;
+  onError: (message: string) => void;
+  onChanged: () => void;
+}) {
+  const institutionId =
+    String(record.id);
+
+  const platformActive =
+    typeof record.status ===
+    "boolean"
+      ? record.status
+      : String(
+          record.status ||
+            "active"
+        ).toLowerCase() !==
+        "inactive";
+
+  const changeStatus =
+    useMutation({
+      mutationFn:
+        async (
+          nextStatus: boolean
+        ) =>
+          api.patch(
+            `/institutions/${institutionId}/status`,
+            {
+              status:
+                nextStatus,
+            }
+          ),
+
+      onMutate:
+        () => {
+          onMessage("");
+          onError("");
+        },
+
+      onSuccess:
+        (response) => {
+          onError("");
+
+          onMessage(
+            response.data
+              ?.message ||
+              "Institution status updated successfully."
+          );
+
+          onChanged();
+        },
+
+      onError:
+        (
+          value: {
+            message?: string;
+            response?: {
+              data?: {
+                message?: string;
+              };
+            };
+          }
+        ) => {
+          onError(
+            value.response
+              ?.data
+              ?.message ||
+              value.message ||
+              "Institution status update failed."
+          );
+        },
+    });
+
+  return (
+    <Button
+      disabled={
+        changeStatus.isPending
+      }
+      onClick={() => {
+        const nextStatus =
+          !platformActive;
+
+        const confirmed =
+          window.confirm(
+            platformActive
+              ? `Deactivate ${String(
+                  record.name
+                )} as a platform institution?`
+              : `Activate ${String(
+                  record.name
+                )} as a platform institution?`
+          );
+
+        if (
+          confirmed
+        ) {
+          changeStatus.mutate(
+            nextStatus
+          );
+        }
+      }}
+    >
+      {changeStatus.isPending
+        ? "Updating..."
+        : platformActive
+          ? "Deactivate institution"
+          : "Activate institution"}
+    </Button>
+  );
+}
+
+function ManagementList({
+  kind,
+}: {
+  kind: Kind;
+}) {
   const { user } = useAuth();
 
-  const [blockchainMessage, setBlockchainMessage] = useState("");
-  const [blockchainError, setBlockchainError] = useState("");
-  const [pendingInstitutionId, setPendingInstitutionId] =
-    useState<string | null>(null);
+  const [
+    blockchainMessage,
+    setBlockchainMessage,
+  ] = useState("");
 
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("");
-  const [sort, setSort] = useState("");
+  const [
+    blockchainError,
+    setBlockchainError,
+  ] = useState("");
+const [
+    page,
+    setPage,
+  ] = useState(1);
 
-  const debounced = useDebounce(search);
-  const path = kind;
+  const [
+    search,
+    setSearch,
+  ] = useState("");
+
+  const [
+    status,
+    setStatus,
+  ] = useState("");
+
+  const [
+    sort,
+    setSort,
+  ] = useState("");
+
+  const debounced =
+    useDebounce(search);
+
+  const path =
+    kind;
 
   const q = useQuery({
-    queryKey: [kind, page, debounced, status, sort],
+    queryKey: [
+      kind,
+      page,
+      debounced,
+      status,
+      sort,
+    ],
 
     queryFn: async () => {
-      const r = await api.get(`/${path}`, {
-        params: {
-          page,
-          limit: 20,
+      const r =
+        await api.get(
+          `/${path}`,
+          {
+            params: {
+              page,
+              limit: 20,
 
-          search:
-            kind === "verification-logs"
-              ? undefined
-              : debounced || undefined,
+              search:
+                kind ===
+                "verification-logs"
+                  ? undefined
+                  : debounced ||
+                    undefined,
 
-          ...(kind === "verification-logs"
-            ? {
-                result: status || undefined,
-              }
-            : ["institutions", "users", "credentials"].includes(kind)
-              ? {
-                  status: status || undefined,
-                }
-              : {}),
+              ...(kind ===
+              "verification-logs"
+                ? {
+                    result:
+                      status ||
+                      undefined,
+                  }
+                : [
+                      "institutions",
+                      "users",
+                      "credentials",
+                    ].includes(
+                      kind
+                    )
+                  ? {
+                      status:
+                        status ||
+                        undefined,
+                    }
+                  : {}),
 
-          sortBy: sort || undefined,
-        },
-      });
+              sortBy:
+                sort ||
+                undefined,
+            },
+          }
+        );
 
       return r.data;
     },
   });
 
-  const authoriseInstitution = useMutation({
-    mutationFn: async (institutionId: string) =>
-      api.post(
-        `/institutions/${institutionId}/blockchain/authorise`
-      ),
+  const rows =
+    (
+      q.data?.[
+        responseKey[
+          kind
+        ]
+      ] ||
+      []
+    ) as JsonRecord[];
 
-    onMutate: (institutionId) => {
-      setPendingInstitutionId(institutionId);
-      setBlockchainMessage("");
-      setBlockchainError("");
-    },
-
-    onSuccess: (response) => {
-      setBlockchainMessage(
-        response.data.message ||
-          "Institution blockchain wallet authorised successfully."
-      );
-
-      void q.refetch();
-    },
-
-    onError: (value: { message?: string }) => {
-      setBlockchainError(
-        value.message ||
-          "Institution blockchain authorisation failed."
-      );
-    },
-
-    onSettled: () => {
-      setPendingInstitutionId(null);
-    },
-  });
-
-  const rows = (q.data?.[responseKey[kind]] || []) as JsonRecord[];
-  const baseColumns = useMemo(() => columnsFor(kind), [kind]);
+  const baseColumns =
+    useMemo(
+      () =>
+        columnsFor(
+          kind
+        ),
+      [
+        kind,
+      ]
+    );
 
   const columns: Column<JsonRecord>[] =
-    kind === "institutions" && user?.role === "super_admin"
+    kind === "institutions" &&
+    user?.role === "super_admin"
       ? [
           ...baseColumns,
+
           {
             key: "blockchain",
             label: "Blockchain",
 
-            render: (record) => {
-              const institutionId = String(record.id);
+            render: (
+              record
+            ) => (
+              <InstitutionBlockchainControl
+                record={
+                  record
+                }
+                onMessage={
+                  setBlockchainMessage
+                }
+                onError={
+                  setBlockchainError
+                }
+              />
+            ),
+          },
 
-              return (
-                <Button
-                  disabled={authoriseInstitution.isPending}
-                  onClick={() => {
-                    const confirmed = window.confirm(
-                      `Authorise ${String(
-                        record.name
-                      )} to issue credentials on Sepolia?`
-                    );
+          {
+            key:
+              "platform-status-action",
 
-                    if (confirmed) {
-                      authoriseInstitution.mutate(institutionId);
-                    }
-                  }}
-                >
-                  {authoriseInstitution.isPending &&
-                  pendingInstitutionId === institutionId
-                    ? "Authorising..."
-                    : "Authorise on blockchain"}
-                </Button>
-              );
-            },
+            label:
+              "Platform status",
+
+            render: (
+              record
+            ) => (
+              <InstitutionPlatformAction
+                record={
+                  record
+                }
+                onMessage={
+                  setBlockchainMessage
+                }
+                onError={
+                  setBlockchainError
+                }
+                onChanged={() => {
+                  void q.refetch();
+                }}
+              />
+            ),
           },
         ]
       : baseColumns;
@@ -189,11 +599,21 @@ function ManagementList({ kind }: { kind: Kind }) {
     <div className="page">
       <div className="page-head">
         <div>
-          <span className="eyebrow">Records</span>
-          <h1>{title(kind)}</h1>
+          <span className="eyebrow">
+            Records
+          </span>
+
+          <h1>
+            {title(
+              kind
+            )}
+          </h1>
         </div>
 
-        {canCreate(kind, user?.role) && (
+        {canCreate(
+          kind,
+          user?.role
+        ) && (
           <Link
             className="button primary"
             to={`/app/${kind}/new`}
@@ -205,16 +625,28 @@ function ManagementList({ kind }: { kind: Kind }) {
 
       <Card>
         <div className="filters">
-          {kind !== "verification-logs" && (
+          {kind !==
+            "verification-logs" && (
             <label>
               Search
 
               <input
                 type="search"
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
+                value={
+                  search
+                }
+                onChange={(
+                  event
+                ) => {
+                  setSearch(
+                    event
+                      .target
+                      .value
+                  );
+
+                  setPage(
+                    1
+                  );
                 }}
               />
             </label>
@@ -225,20 +657,39 @@ function ManagementList({ kind }: { kind: Kind }) {
             "users",
             "credentials",
             "verification-logs",
-          ].includes(kind) && (
+          ].includes(
+            kind
+          ) && (
             <label>
-              {kind === "verification-logs" ? "Result" : "Status"}
+              {kind ===
+              "verification-logs"
+                ? "Result"
+                : "Status"}
 
               <select
-                value={status}
-                onChange={(e) => {
-                  setStatus(e.target.value);
-                  setPage(1);
+                value={
+                  status
+                }
+                onChange={(
+                  event
+                ) => {
+                  setStatus(
+                    event
+                      .target
+                      .value
+                  );
+
+                  setPage(
+                    1
+                  );
                 }}
               >
-                <option value="">All</option>
+                <option value="">
+                  All
+                </option>
 
-                {(kind === "verification-logs"
+                {(kind ===
+                "verification-logs"
                   ? [
                       "VERIFIED",
                       "REVOKED",
@@ -248,7 +699,8 @@ function ManagementList({ kind }: { kind: Kind }) {
                       "SYSTEM_INCONSISTENCY",
                       "INVALID_FILE",
                     ]
-                  : kind === "credentials"
+                  : kind ===
+                      "credentials"
                     ? [
                         "pending",
                         "processing",
@@ -257,39 +709,90 @@ function ManagementList({ kind }: { kind: Kind }) {
                         "revoked",
                         "superseded",
                       ]
-                    : ["active", "inactive"]
-                ).map((value) => (
-                  <option key={value}>{value}</option>
-                ))}
+                    : [
+                        "active",
+                        "inactive",
+                      ]
+                ).map(
+                  (
+                    value
+                  ) => (
+                    <option
+                      key={
+                        value
+                      }
+                      value={
+                        value
+                      }
+                    >
+                      {
+                        value
+                      }
+                    </option>
+                  )
+                )}
               </select>
             </label>
           )}
         </div>
 
         {blockchainError && (
-          <div className="notice error" role="alert">
-            {blockchainError}
+          <div
+            className="notice error"
+            role="alert"
+          >
+            {
+              blockchainError
+            }
           </div>
         )}
 
         {blockchainMessage && (
           <div className="notice success">
-            {blockchainMessage}
+            {
+              blockchainMessage
+            }
           </div>
         )}
 
         <DataTable
-          rows={rows}
-          columns={columns}
-          loading={q.isLoading}
-          error={q.error}
-          page={page}
-          totalPages={q.data?.pagination?.totalPages || 1}
-          tableLabel={title(kind)}
-          onPage={setPage}
-          onSort={(value) => {
-            setSort(value);
-            setPage(1);
+          rows={
+            rows
+          }
+          columns={
+            columns
+          }
+          loading={
+            q.isLoading
+          }
+          error={
+            q.error
+          }
+          page={
+            page
+          }
+          totalPages={
+            q.data
+              ?.pagination
+              ?.totalPages ||
+            1
+          }
+          tableLabel={title(
+            kind
+          )}
+          onPage={
+            setPage
+          }
+          onSort={(
+            value
+          ) => {
+            setSort(
+              value
+            );
+
+            setPage(
+              1
+            );
           }}
         />
       </Card>
@@ -297,47 +800,77 @@ function ManagementList({ kind }: { kind: Kind }) {
   );
 }
 
-function title(k: string) {
+function title(
+  k: string
+) {
   return k
     .split("-")
-    .map((x) => x[0].toUpperCase() + x.slice(1))
+    .map(
+      (
+        value
+      ) =>
+        value[0]
+          .toUpperCase() +
+        value.slice(
+          1
+        )
+    )
     .join(" ");
 }
 
 function canCreate(
-  k: Kind,
+  kind: Kind,
   role?: string
 ) {
-  if (!role) {
+  if (
+    !role
+  ) {
     return false;
   }
 
-  if (k === "institutions") {
-    return role === "super_admin";
-  }
-
-  if (k === "users") {
-    return [
-      "super_admin",
-      "institution_admin",
-    ].includes(role);
+  if (
+    kind ===
+    "institutions"
+  ) {
+    return (
+      role ===
+      "super_admin"
+    );
   }
 
   if (
-    k === "students" ||
-    k === "credentials"
+    kind ===
+    "users"
+  ) {
+    return [
+      "super_admin",
+      "institution_admin",
+    ].includes(
+      role
+    );
+  }
+
+  if (
+    kind ===
+      "students" ||
+    kind ===
+      "credentials"
   ) {
     return [
       "super_admin",
       "institution_admin",
       "issuer",
-    ].includes(role);
+    ].includes(
+      role
+    );
   }
 
   return false;
 }
 
-function columnsFor(k: Kind): Column<JsonRecord>[] {
+function columnsFor(
+  kind: Kind
+): Column<JsonRecord>[] {
   const text = (
     key: string,
     label: string,
@@ -347,7 +880,17 @@ function columnsFor(k: Kind): Column<JsonRecord>[] {
     key,
     label,
     sortable,
-    render: (r) => String(r[field] ?? "?"),
+
+    render:
+      (
+        record
+      ) =>
+        String(
+          record[
+            field
+          ] ??
+            "?"
+        ),
   });
 
   const linked = (
@@ -358,11 +901,24 @@ function columnsFor(k: Kind): Column<JsonRecord>[] {
     key,
     label,
     sortable: true,
-    render: (r) => (
-      <Link to={`/app/${k}/${String(r.id)}`}>
-        {String(r[field] ?? "?")}
-      </Link>
-    ),
+
+    render:
+      (
+        record
+      ) => (
+        <Link
+          to={`/app/${kind}/${String(
+            record.id
+          )}`}
+        >
+          {String(
+            record[
+              field
+            ] ??
+              "?"
+          )}
+        </Link>
+      ),
   });
 
   const badge = (
@@ -373,96 +929,257 @@ function columnsFor(k: Kind): Column<JsonRecord>[] {
     key,
     label,
     sortable: true,
-    render: (r) => (
-      <Badge
-        value={
-          typeof r[field] === "boolean"
-            ? r[field]
-              ? "active"
-              : "inactive"
-            : String(r[field] ?? "Unknown")
-        }
-      />
-    ),
+
+    render:
+      (
+        record
+      ) => (
+        <Badge
+          value={
+            typeof record[
+              field
+            ] ===
+            "boolean"
+              ? record[
+                    field
+                  ]
+                ? "active"
+                : "inactive"
+              : String(
+                  record[
+                    field
+                  ] ??
+                    "Unknown"
+                )
+          }
+        />
+      ),
   });
 
-  switch (k) {
+  switch (
+    kind
+  ) {
     case "institutions":
       return [
-        text("name", "Institution", true),
-        text("email", "Email", true),
-        badge("status", "Status"),
-        text("created_at", "Created", true),
+        text(
+          "name",
+          "Institution",
+          true
+        ),
+
+        text(
+          "email",
+          "Email",
+          true
+        ),
+
+        badge(
+          "status",
+          "Status"
+        ),
+
+        text(
+          "created_at",
+          "Created",
+          true
+        ),
       ];
 
     case "users":
       return [
-        linked("full_name", "Name", "fullName"),
-        text("email", "Email", true),
-        text("role", "Role", true),
-        badge("is_active", "Status", "isActive"),
-        text("created_at", "Created", true, "createdAt"),
+        linked(
+          "full_name",
+          "Name",
+          "fullName"
+        ),
+
+        text(
+          "email",
+          "Email",
+          true
+        ),
+
+        text(
+          "role",
+          "Role",
+          true
+        ),
+
+        badge(
+          "is_active",
+          "Status",
+          "isActive"
+        ),
+
+        text(
+          "created_at",
+          "Created",
+          true,
+          "createdAt"
+        ),
       ];
 
     case "students":
       return [
-        linked("full_name", "Student"),
-        text("student_number", "Student number", true),
-        text("programme", "Programme", true),
-        text("institution_name", "Institution"),
-        text("created_at", "Created", true),
+        linked(
+          "full_name",
+          "Student"
+        ),
+
+        text(
+          "student_number",
+          "Student number",
+          true
+        ),
+
+        text(
+          "programme",
+          "Programme",
+          true
+        ),
+
+        text(
+          "institution_name",
+          "Institution"
+        ),
+
+        text(
+          "created_at",
+          "Created",
+          true
+        ),
       ];
 
     case "credentials":
       return [
-        linked("qualification", "Qualification"),
-        text("student_name", "Student"),
-        text("institution_name", "Institution"),
-        badge("status", "Status"),
-        text("issue_date", "Issue date", true),
+        linked(
+          "qualification",
+          "Qualification"
+        ),
+
+        text(
+          "student_name",
+          "Student"
+        ),
+
+        text(
+          "institution_name",
+          "Institution"
+        ),
+
+        badge(
+          "status",
+          "Status"
+        ),
+
+        text(
+          "issue_date",
+          "Issue date",
+          true
+        ),
       ];
 
     case "verification-logs":
       return [
-        text("credential_id", "Credential ID"),
+        text(
+          "credential_id",
+          "Credential ID"
+        ),
 
         {
-          key: "result",
-          label: "Result",
-          sortable: true,
-          render: (r) => (
-            <Badge
-              value={String(
-                r.result_code ??
-                  r.result ??
-                  "Unknown"
-              )}
-            />
-          ),
+          key:
+            "result",
+
+          label:
+            "Result",
+
+          sortable:
+            true,
+
+          render:
+            (
+              record
+            ) => (
+              <Badge
+                value={String(
+                  record
+                    .result_code ??
+                    record
+                      .result ??
+                    "Unknown"
+                )}
+              />
+            ),
         },
 
-        text("verification_method", "Method", true),
-        text("verification_time", "Verified at", true),
+        text(
+          "verification_method",
+          "Method",
+          true
+        ),
+
+        text(
+          "verification_time",
+          "Verified at",
+          true
+        ),
       ];
 
     case "audit-logs":
       return [
-        text("action", "Action", true),
-        text("entity_type", "Entity type", true),
-        text("entity_id", "Entity ID"),
-        text("created_at", "Created", true),
+        text(
+          "action",
+          "Action",
+          true
+        ),
+
+        text(
+          "entity_type",
+          "Entity type",
+          true
+        ),
+
+        text(
+          "entity_id",
+          "Entity ID"
+        ),
+
+        text(
+          "created_at",
+          "Created",
+          true
+        ),
       ];
   }
 }
 
-function useDebounce(v: string) {
-  const [state, setState] = useState(v);
+function useDebounce(
+  value: string
+) {
+  const [
+    state,
+    setState,
+  ] = useState(
+    value
+  );
 
   useEffect(() => {
-    const t = setTimeout(() => setState(v), 350);
+    const timer =
+      window.setTimeout(
+        () =>
+          setState(
+            value
+          ),
+        350
+      );
 
-    return () => clearTimeout(t);
-  }, [v]);
+    return () =>
+      window.clearTimeout(
+        timer
+      );
+  }, [
+    value,
+  ]);
 
   return state;
 }
@@ -476,130 +1193,217 @@ export function CreatePage({
     | "students"
     | "credentials";
 }) {
-  const qc = useQueryClient();
-  const { user } = useAuth();
+  const qc =
+    useQueryClient();
 
-  const [msg, setMsg] = useState("");
-  const [error, setError] = useState("");
+  const {
+    user,
+  } = useAuth();
+
+  const [
+    msg,
+    setMsg,
+  ] = useState("");
+
+  const [
+    error,
+    setError,
+  ] = useState("");
 
   const [
     credentialInstitutionId,
     setCredentialInstitutionId,
-  ] = useState(user?.institutionId || "");
+  ] = useState(
+    user?.institutionId ||
+      ""
+  );
 
-  const [studentSearch, setStudentSearch] = useState("");
-  const debouncedStudentSearch = useDebounce(studentSearch);
+  const [
+    studentSearch,
+    setStudentSearch,
+  ] = useState("");
 
-  const institutions = useQuery({
-    queryKey: ["institutions", "provisioning"],
+  const debouncedStudentSearch =
+    useDebounce(
+      studentSearch
+    );
 
-    queryFn: async () => {
-      const r = await api.get("/institutions", {
-        params: {
-          limit: 100,
-          status: "active",
+  const institutions =
+    useQuery({
+      queryKey: [
+        "institutions",
+        "provisioning",
+      ],
+
+      queryFn:
+        async () => {
+          const response =
+            await api.get(
+              "/institutions",
+              {
+                params: {
+                  limit:
+                    100,
+
+                  status:
+                    "active",
+                },
+              }
+            );
+
+          return (
+            response
+              .data
+              .institutions ||
+            []
+          );
         },
-      });
 
-      return r.data.institutions || [];
-    },
+      enabled:
+        (
+          kind ===
+            "users" ||
+          kind ===
+            "students" ||
+          kind ===
+            "credentials"
+        ) &&
+        user?.role ===
+          "super_admin",
+    });
 
-    enabled:
-      (kind === "users" ||
-        kind === "students" ||
-        kind === "credentials") &&
-      user?.role === "super_admin",
-  });
+  const eligibleStudents =
+    useQuery({
+      queryKey: [
+        "students",
+        "issuance",
+        credentialInstitutionId,
+        debouncedStudentSearch,
+      ],
 
-  const eligibleStudents = useQuery({
-    queryKey: [
-      "students",
-      "issuance",
-      credentialInstitutionId,
-      debouncedStudentSearch,
-    ],
+      queryFn:
+        async () =>
+          (
+            await api.get(
+              "/students",
+              {
+                params: {
+                  institutionId:
+                    credentialInstitutionId ||
+                    undefined,
 
-    queryFn: async () =>
-      (
-        await api.get("/students", {
-          params: {
-            institutionId:
-              credentialInstitutionId || undefined,
+                  search:
+                    debouncedStudentSearch ||
+                    undefined,
 
-            search:
-              debouncedStudentSearch || undefined,
+                  page:
+                    1,
 
-            page: 1,
-            limit: 20,
-          },
-        })
-      ).data.students || [],
+                  limit:
+                    20,
+                },
+              }
+            )
+          ).data
+            .students ||
+          [],
 
-    enabled:
-      kind === "credentials" &&
-      Boolean(credentialInstitutionId),
-  });
+      enabled:
+        kind ===
+          "credentials" &&
+        Boolean(
+          credentialInstitutionId
+        ),
+    });
 
-  const mut = useMutation({
-    mutationFn: async (form: HTMLFormElement) => {
-      const data = new FormData(form);
+  const mut =
+    useMutation({
+      mutationFn:
+        async (
+          form:
+            HTMLFormElement
+        ) => {
+          const data =
+            new FormData(
+              form
+            );
 
-      /*
-       * Credential issuance includes:
-       * - accreditation validation
-       * - structured proof generation
-       * - IPFS upload
-       * - Sepolia transaction confirmation
-       * - signed status-list publication
-       *
-       * It therefore needs a larger timeout than normal CRUD requests.
-       */
-      if (kind === "credentials") {
-        return api.post(
-          "/credentials/issue",
-          data,
-          {
-            timeout: 120000,
+          if (
+            kind ===
+            "credentials"
+          ) {
+            return api.post(
+              "/credentials/issue",
+              data,
+              {
+                timeout:
+                  120000,
+              }
+            );
           }
-        );
-      }
 
-      const body = Object.fromEntries(data.entries());
+          const body =
+            Object.fromEntries(
+              data.entries()
+            );
 
-      if (
-        kind === "users" &&
-        user?.role === "institution_admin"
-      ) {
-        delete body.institutionId;
-      }
+          if (
+            kind ===
+              "users" &&
+            user?.role ===
+              "institution_admin"
+          ) {
+            delete body
+              .institutionId;
+          }
 
-      return api.post(`/${kind}`, body);
-    },
+          return api.post(
+            `/${kind}`,
+            body
+          );
+        },
 
-    onSuccess: () => {
-      setError("");
+      onSuccess:
+        () => {
+          setError(
+            ""
+          );
 
-      setMsg(
-        `${title(kind)} record created successfully.`
-      );
+          setMsg(
+            `${title(
+              kind
+            )} record created successfully.`
+          );
 
-      void qc.invalidateQueries({
-        queryKey: [kind],
-      });
-    },
+          void qc.invalidateQueries(
+            {
+              queryKey: [
+                kind,
+              ],
+            }
+          );
+        },
 
-    onError: (e: { message?: string }) => {
-      setMsg("");
+      onError:
+        (
+          value: {
+            message?: string;
+          }
+        ) => {
+          setMsg(
+            ""
+          );
 
-      setError(
-        e.message ||
-          "Unable to create record."
-      );
-    },
-  });
+          setError(
+            value.message ||
+              "Unable to create record."
+          );
+        },
+    });
 
   const roles =
-    user?.role === "super_admin"
+    user?.role ===
+    "super_admin"
       ? [
           "institution_admin",
           "issuer",
@@ -617,23 +1421,40 @@ export function CreatePage({
   return (
     <div className="page narrow">
       <h1>
-        {kind === "credentials"
+        {kind ===
+        "credentials"
           ? "Issue credential"
-          : `Create ${title(kind).slice(0, -1)}`}
+          : `Create ${title(
+              kind
+            ).slice(
+              0,
+              -1
+            )}`}
       </h1>
 
       <Card>
         <form
-          onSubmit={(e) => {
-            e.preventDefault();
+          onSubmit={(
+            event
+          ) => {
+            event.preventDefault();
 
-            setError("");
-            setMsg("");
+            setError(
+              ""
+            );
 
-            mut.mutate(e.currentTarget);
+            setMsg(
+              ""
+            );
+
+            mut.mutate(
+              event
+                .currentTarget
+            );
           }}
         >
-          {kind === "institutions" && (
+          {kind ===
+            "institutions" && (
             <>
               <Field
                 name="name"
@@ -652,18 +1473,22 @@ export function CreatePage({
               />
 
               <label>
-                Phone (optional)
+                Phone
+                (optional)
 
                 <input
                   name="phone"
                   type="tel"
-                  maxLength={30}
+                  maxLength={
+                    30
+                  }
                 />
               </label>
             </>
           )}
 
-          {kind === "users" && (
+          {kind ===
+            "users" && (
             <>
               <Field
                 name="fullName"
@@ -683,33 +1508,62 @@ export function CreatePage({
                   required
                   name="role"
                 >
-                  {roles.map((role) => (
-                    <option
-                      key={role}
-                      value={role}
-                    >
-                      {role.replaceAll("_", " ")}
-                    </option>
-                  ))}
+                  {roles.map(
+                    (
+                      role
+                    ) => (
+                      <option
+                        key={
+                          role
+                        }
+                        value={
+                          role
+                        }
+                      >
+                        {role.replaceAll(
+                          "_",
+                          " "
+                        )}
+                      </option>
+                    )
+                  )}
                 </select>
               </label>
 
-              {user?.role === "super_admin" ? (
+              {user?.role ===
+              "super_admin" ? (
                 <label>
                   Institution
 
                   <select name="institutionId">
                     <option value="">
-                      Global role (super administrator or regulator)
+                      Global
+                      role
+                      (super
+                      administrator
+                      or
+                      regulator)
                     </option>
 
-                    {(institutions.data || []).map(
-                      (i: JsonRecord) => (
+                    {(
+                      institutions.data ||
+                      []
+                    ).map(
+                      (
+                        institution:
+                          JsonRecord
+                      ) => (
                         <option
-                          key={String(i.id)}
-                          value={String(i.id)}
+                          key={String(
+                            institution.id
+                          )}
+                          value={String(
+                            institution.id
+                          )}
                         >
-                          {String(i.name)}
+                          {String(
+                            institution.name
+                          )}
                         </option>
                       )
                     )}
@@ -717,13 +1571,17 @@ export function CreatePage({
                 </label>
               ) : (
                 <p className="notice">
-                  Institution is fixed to your institution.
+                  Institution
+                  is fixed to
+                  your
+                  institution.
                 </p>
               )}
             </>
           )}
 
-          {kind === "students" && (
+          {kind ===
+            "students" && (
             <>
               <Field
                 name="fullName"
@@ -746,7 +1604,8 @@ export function CreatePage({
                 label="Programme"
               />
 
-              {user?.role === "super_admin" ? (
+              {user?.role ===
+              "super_admin" ? (
                 <label>
                   Institution
 
@@ -755,16 +1614,30 @@ export function CreatePage({
                     name="institutionId"
                   >
                     <option value="">
-                      Select active institution
+                      Select
+                      active
+                      institution
                     </option>
 
-                    {(institutions.data || []).map(
-                      (institution: JsonRecord) => (
+                    {(
+                      institutions.data ||
+                      []
+                    ).map(
+                      (
+                        institution:
+                          JsonRecord
+                      ) => (
                         <option
-                          key={String(institution.id)}
-                          value={String(institution.id)}
+                          key={String(
+                            institution.id
+                          )}
+                          value={String(
+                            institution.id
+                          )}
                         >
-                          {String(institution.name)}
+                          {String(
+                            institution.name
+                          )}
                         </option>
                       )
                     )}
@@ -775,44 +1648,72 @@ export function CreatePage({
                   <input
                     type="hidden"
                     name="institutionId"
-                    value={user?.institutionId || ""}
+                    value={
+                      user?.institutionId ||
+                      ""
+                    }
                   />
 
                   <p className="notice">
-                    Institution is fixed to your institution.
+                    Institution
+                    is fixed to
+                    your
+                    institution.
                   </p>
                 </>
               )}
             </>
           )}
 
-          {kind === "credentials" && (
+          {kind ===
+            "credentials" && (
             <>
-              {user?.role === "super_admin" ? (
+              {user?.role ===
+              "super_admin" ? (
                 <label>
                   Institution
 
                   <select
                     required
                     name="institutionId"
-                    value={credentialInstitutionId}
-                    onChange={(event) =>
+                    value={
+                      credentialInstitutionId
+                    }
+                    onChange={(
+                      event
+                    ) =>
                       setCredentialInstitutionId(
-                        event.target.value
+                        event
+                          .target
+                          .value
                       )
                     }
                   >
                     <option value="">
-                      Select active institution
+                      Select
+                      active
+                      institution
                     </option>
 
-                    {(institutions.data || []).map(
-                      (institution: JsonRecord) => (
+                    {(
+                      institutions.data ||
+                      []
+                    ).map(
+                      (
+                        institution:
+                          JsonRecord
+                      ) => (
                         <option
-                          key={String(institution.id)}
-                          value={String(institution.id)}
+                          key={String(
+                            institution.id
+                          )}
+                          value={String(
+                            institution.id
+                          )}
                         >
-                          {String(institution.name)}
+                          {String(
+                            institution.name
+                          )}
                         </option>
                       )
                     )}
@@ -823,11 +1724,17 @@ export function CreatePage({
                   <input
                     type="hidden"
                     name="institutionId"
-                    value={user?.institutionId || ""}
+                    value={
+                      user?.institutionId ||
+                      ""
+                    }
                   />
 
                   <p className="notice">
-                    Institution is fixed to your institution.
+                    Institution
+                    is fixed to
+                    your
+                    institution.
                   </p>
                 </>
               )}
@@ -837,10 +1744,20 @@ export function CreatePage({
 
                 <input
                   type="search"
-                  value={studentSearch}
-                  maxLength={200}
-                  onChange={(event) =>
-                    setStudentSearch(event.target.value)
+                  value={
+                    studentSearch
+                  }
+                  maxLength={
+                    200
+                  }
+                  onChange={(
+                    event
+                  ) =>
+                    setStudentSearch(
+                      event
+                        .target
+                        .value
+                    )
                   }
                 />
               </label>
@@ -853,23 +1770,38 @@ export function CreatePage({
                   name="studentId"
                 >
                   <option value="">
-                    Select student
+                    Select
+                    student
                   </option>
 
-                  {(eligibleStudents.data || []).map(
-                    (student: JsonRecord) => (
+                  {(
+                    eligibleStudents.data ||
+                    []
+                  ).map(
+                    (
+                      student:
+                        JsonRecord
+                    ) => (
                       <option
-                        key={String(student.id)}
-                        value={String(student.id)}
+                        key={String(
+                          student.id
+                        )}
+                        value={String(
+                          student.id
+                        )}
                       >
                         {String(
-                          student.full_name ||
-                            student.fullName
+                          student
+                            .full_name ||
+                            student
+                              .fullName
                         )}{" "}
                         —{" "}
                         {String(
-                          student.student_number ||
-                            student.studentNumber
+                          student
+                            .student_number ||
+                            student
+                              .studentNumber
                         )}
                       </option>
                     )
@@ -899,7 +1831,9 @@ export function CreatePage({
 
           <Button
             className="primary"
-            disabled={mut.isPending}
+            disabled={
+              mut.isPending
+            }
           >
             {mut.isPending
               ? "Processing—wait for confirmation…"
@@ -907,14 +1841,21 @@ export function CreatePage({
           </Button>
 
           {error && (
-            <div className="notice error">
-              {error}
+            <div
+              className="notice error"
+              role="alert"
+            >
+              {
+                error
+              }
             </div>
           )}
 
           {msg && (
             <div className="notice success">
-              {msg}
+              {
+                msg
+              }
             </div>
           )}
         </form>
@@ -923,251 +1864,368 @@ export function CreatePage({
   );
 }
 
-function Field(p: {
-  name: string;
-  label: string;
-  type?: string;
-  accept?: string;
-  defaultValue?: string;
-}) {
+function Field(
+  props: {
+    name: string;
+    label: string;
+    type?: string;
+    accept?: string;
+    defaultValue?: string;
+  }
+) {
   return (
     <label>
-      {p.label}
+      {
+        props.label
+      }
 
       <input
         required
-        name={p.name}
-        type={p.type || "text"}
-        accept={p.accept}
-        defaultValue={p.defaultValue}
+        name={
+          props.name
+        }
+        type={
+          props.type ||
+          "text"
+        }
+        accept={
+          props.accept
+        }
+        defaultValue={
+          props.defaultValue
+        }
       />
     </label>
   );
 }
 
 export function StudentDetail() {
-  const { id } = useParams();
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
+  const {
+    id,
+  } = useParams();
 
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const {
+    user,
+  } = useAuth();
 
-  const [institutionChange, setInstitutionChange] =
-    useState<string | null>(null);
+  const queryClient =
+    useQueryClient();
 
-  const [accountUserId, setAccountUserId] = useState("");
+  const [
+    message,
+    setMessage,
+  ] = useState("");
 
-  const student = useQuery({
-    queryKey: ["students", id],
+  const [
+    error,
+    setError,
+  ] = useState("");
 
-    queryFn: async () =>
-      (
-        await api.get(
-          `/students/${id}`
-        )
-      ).data.student,
-  });
+  const [
+    institutionChange,
+    setInstitutionChange,
+  ] = useState<
+    string |
+    null
+  >(
+    null
+  );
 
-  const credentials = useQuery({
-    queryKey: [
-      "credentials",
-      "student",
-      id,
-    ],
+  const [
+    accountUserId,
+    setAccountUserId,
+  ] = useState("");
 
-    queryFn: async () =>
-      (
-        await api.get(
-          "/credentials",
-          {
-            params: {
-              studentId: id,
-              limit: 20,
-            },
-          }
-        )
-      ).data,
+  const student =
+    useQuery({
+      queryKey: [
+        "students",
+        id,
+      ],
 
-    enabled: Boolean(student.data),
-  });
+      queryFn:
+        async () =>
+          (
+            await api.get(
+              `/students/${id}`
+            )
+          ).data
+            .student,
+    });
 
-  const institutions = useQuery({
-    queryKey: [
-      "institutions",
-      "student-edit",
-    ],
+  const credentials =
+    useQuery({
+      queryKey: [
+        "credentials",
+        "student",
+        id,
+      ],
 
-    queryFn: async () =>
-      (
-        await api.get(
-          "/institutions",
-          {
-            params: {
-              limit: 100,
-              status: "active",
-            },
-          }
-        )
-      ).data.institutions || [],
+      queryFn:
+        async () =>
+          (
+            await api.get(
+              "/credentials",
+              {
+                params: {
+                  studentId:
+                    id,
 
-    enabled:
-      user?.role ===
-      "super_admin",
-  });
+                  limit:
+                    20,
+                },
+              }
+            )
+          ).data,
+
+      enabled:
+        Boolean(
+          student.data
+        ),
+    });
+
+  const institutions =
+    useQuery({
+      queryKey: [
+        "institutions",
+        "student-edit",
+      ],
+
+      queryFn:
+        async () =>
+          (
+            await api.get(
+              "/institutions",
+              {
+                params: {
+                  limit:
+                    100,
+
+                  status:
+                    "active",
+                },
+              }
+            )
+          ).data
+            .institutions ||
+          [],
+
+      enabled:
+        user?.role ===
+        "super_admin",
+    });
 
   const record =
-    (student.data || {}) as JsonRecord;
+    (
+      student.data ||
+      {}
+    ) as JsonRecord;
 
-  const canEdit = [
-    "super_admin",
-    "institution_admin",
-    "issuer",
-  ].includes(
-    user?.role || ""
-  );
+  const canEdit =
+    [
+      "super_admin",
+      "institution_admin",
+      "issuer",
+    ].includes(
+      user?.role ||
+        ""
+    );
 
-  const canLinkAccount = [
-    "super_admin",
-    "institution_admin",
-  ].includes(
-    user?.role || ""
-  );
+  const canLinkAccount =
+    [
+      "super_admin",
+      "institution_admin",
+    ].includes(
+      user?.role ||
+        ""
+    );
 
-  const studentAccounts = useQuery({
-    queryKey: [
-      "users",
-      "student-account-link",
-      id,
-    ],
+  const studentAccounts =
+    useQuery({
+      queryKey: [
+        "users",
+        "student-account-link",
+        id,
+      ],
 
-    queryFn: async () =>
-      (
-        await api.get(
-          "/users",
-          {
-            params: {
-              page: 1,
-              limit: 100,
-              status: "active",
-            },
-          }
-        )
-      ).data.users || [],
+      queryFn:
+        async () =>
+          (
+            await api.get(
+              "/users",
+              {
+                params: {
+                  page:
+                    1,
 
-    enabled:
-      Boolean(student.data) &&
-      !record.user_id &&
-      canLinkAccount,
-  });
+                  limit:
+                    100,
 
-  const complete = (
-    text: string
-  ) => {
-    setMessage(text);
-    setError("");
-    setInstitutionChange(null);
-    setAccountUserId("");
+                  status:
+                    "active",
+                },
+              }
+            )
+          ).data
+            .users ||
+          [],
 
-    void student.refetch();
-
-    void queryClient.invalidateQueries({
-      queryKey: ["students"],
+      enabled:
+        Boolean(
+          student.data
+        ) &&
+        !record.user_id &&
+        canLinkAccount,
     });
-  };
 
-  const save = useMutation({
-    mutationFn: (
-      body: JsonRecord
-    ) =>
-      api.patch(
-        `/students/${id}`,
-        body
-      ),
-
-    onSuccess: (
-      response
-    ) =>
-      complete(
-        response.data.message ||
-          "Student updated."
-      ),
-
-    onError: (
-      value: {
-        message?: string;
-      }
-    ) =>
-      setError(
-        value.message ||
-          "Unable to update student."
-      ),
-  });
-
-  const reassign = useMutation({
-    mutationFn: (
-      institutionId: string
-    ) =>
-      api.patch(
-        `/students/${id}/institution`,
-        {
-          institutionId,
-        }
-      ),
-
-    onSuccess: (
-      response
-    ) =>
-      complete(
-        response.data.message ||
-          "Student institution reassigned."
-      ),
-
-    onError: (
-      value: {
-        message?: string;
-      }
-    ) =>
-      setError(
-        value.message ||
-          "Unable to reassign student."
-      ),
-  });
-
-  const linkAccount = useMutation({
-    mutationFn: (
-      userId: string
-    ) =>
-      api.post(
-        `/students/${id}/account`,
-        {
-          userId,
-        }
-      ),
-
-    onSuccess: (
-      response
+  const complete =
+    (
+      text:
+        string
     ) => {
-      complete(
-        response.data.message ||
-          "Student account linked successfully."
+      setMessage(
+        text
       );
 
-      void queryClient.invalidateQueries({
-        queryKey: ["users"],
-      });
-    },
-
-    onError: (
-      value: {
-        message?: string;
-      }
-    ) =>
       setError(
-        value.message ||
-          "Unable to link student account."
-      ),
-  });
+        ""
+      );
+
+      setInstitutionChange(
+        null
+      );
+
+      setAccountUserId(
+        ""
+      );
+
+      void student.refetch();
+
+      void queryClient
+        .invalidateQueries(
+          {
+            queryKey: [
+              "students",
+            ],
+          }
+        );
+    };
+
+  const save =
+    useMutation({
+      mutationFn:
+        (
+          body:
+            JsonRecord
+        ) =>
+          api.patch(
+            `/students/${id}`,
+            body
+          ),
+
+      onSuccess:
+        (
+          response
+        ) =>
+          complete(
+            response.data
+              .message ||
+              "Student updated."
+          ),
+
+      onError:
+        (
+          value: {
+            message?: string;
+          }
+        ) =>
+          setError(
+            value.message ||
+              "Unable to update student."
+          ),
+    });
+
+  const reassign =
+    useMutation({
+      mutationFn:
+        (
+          institutionId:
+            string
+        ) =>
+          api.patch(
+            `/students/${id}/institution`,
+            {
+              institutionId,
+            }
+          ),
+
+      onSuccess:
+        (
+          response
+        ) =>
+          complete(
+            response.data
+              .message ||
+              "Student institution reassigned."
+          ),
+
+      onError:
+        (
+          value: {
+            message?: string;
+          }
+        ) =>
+          setError(
+            value.message ||
+              "Unable to reassign student."
+          ),
+    });
+
+  const linkAccount =
+    useMutation({
+      mutationFn:
+        (
+          userId:
+            string
+        ) =>
+          api.post(
+            `/students/${id}/account`,
+            {
+              userId,
+            }
+          ),
+
+      onSuccess:
+        (
+          response
+        ) => {
+          complete(
+            response.data
+              .message ||
+              "Student account linked successfully."
+          );
+
+          void queryClient
+            .invalidateQueries(
+              {
+                queryKey: [
+                  "users",
+                ],
+              }
+            );
+        },
+
+      onError:
+        (
+          value: {
+            message?: string;
+          }
+        ) =>
+          setError(
+            value.message ||
+              "Unable to link student account."
+          ),
+    });
 
   const eligibleStudentAccounts =
     (
@@ -1175,29 +2233,40 @@ export function StudentDetail() {
       []
     ).filter(
       (
-        account: JsonRecord
+        account:
+          JsonRecord
       ) => {
-        const role = String(
-          account.role || ""
-        );
+        const role =
+          String(
+            account.role ||
+              ""
+          );
 
-        const institutionId = String(
-          account.institutionId ??
-            account.institution_id ??
-            ""
-        );
+        const institutionId =
+          String(
+            account
+              .institutionId ??
+              account
+                .institution_id ??
+              ""
+          );
 
-        const isActive =
-          account.isActive ??
-          account.is_active ??
+        const active =
+          account
+            .isActive ??
+          account
+            .is_active ??
           true;
 
         return (
-          role === "student" &&
-          isActive !== false &&
+          role ===
+            "student" &&
+          active !==
+            false &&
           institutionId ===
             String(
-              record.institution_id ||
+              record
+                .institution_id ||
                 ""
             )
         );
@@ -1247,38 +2316,42 @@ export function StudentDetail() {
 
                   const data =
                     new FormData(
-                      event.currentTarget
+                      event
+                        .currentTarget
                     );
 
-                  save.mutate({
-                    studentNumber:
-                      data.get(
-                        "studentNumber"
-                      ),
+                  save.mutate(
+                    {
+                      studentNumber:
+                        data.get(
+                          "studentNumber"
+                        ),
 
-                    fullName:
-                      data.get(
-                        "fullName"
-                      ),
+                      fullName:
+                        data.get(
+                          "fullName"
+                        ),
 
-                    email:
-                      data.get(
-                        "email"
-                      ) ||
-                      null,
+                      email:
+                        data.get(
+                          "email"
+                        ) ||
+                        null,
 
-                    programme:
-                      data.get(
-                        "programme"
-                      ),
-                  });
+                      programme:
+                        data.get(
+                          "programme"
+                        ),
+                    }
+                  );
                 }}
               >
                 <Field
                   name="studentNumber"
                   label="Student number"
                   defaultValue={String(
-                    record.student_number ||
+                    record
+                      .student_number ||
                       ""
                   )}
                 />
@@ -1287,7 +2360,8 @@ export function StudentDetail() {
                   name="fullName"
                   label="Full name"
                   defaultValue={String(
-                    record.full_name ||
+                    record
+                      .full_name ||
                       ""
                   )}
                 />
@@ -1299,7 +2373,8 @@ export function StudentDetail() {
                     name="email"
                     type="email"
                     defaultValue={String(
-                      record.email ||
+                      record
+                        .email ||
                         ""
                     )}
                   />
@@ -1309,7 +2384,8 @@ export function StudentDetail() {
                   name="programme"
                   label="Programme"
                   defaultValue={String(
-                    record.programme ||
+                    record
+                      .programme ||
                       ""
                   )}
                 />
@@ -1329,24 +2405,28 @@ export function StudentDetail() {
               <dl>
                 <div>
                   <dt>
-                    Student number
+                    Student
+                    number
                   </dt>
 
                   <dd>
                     {String(
-                      record.student_number
+                      record
+                        .student_number
                     )}
                   </dd>
                 </div>
 
                 <div>
                   <dt>
-                    Full name
+                    Full
+                    name
                   </dt>
 
                   <dd>
                     {String(
-                      record.full_name
+                      record
+                        .full_name
                     )}
                   </dd>
                 </div>
@@ -1358,7 +2438,8 @@ export function StudentDetail() {
 
                   <dd>
                     {String(
-                      record.email ||
+                      record
+                        .email ||
                         "Not provided"
                     )}
                   </dd>
@@ -1371,7 +2452,8 @@ export function StudentDetail() {
 
                   <dd>
                     {String(
-                      record.programme
+                      record
+                        .programme
                     )}
                   </dd>
                 </div>
@@ -1388,7 +2470,8 @@ export function StudentDetail() {
 
                 <dd>
                   {String(
-                    record.institution_name ||
+                    record
+                      .institution_name ||
                       "Unknown institution"
                   )}
                 </dd>
@@ -1396,15 +2479,18 @@ export function StudentDetail() {
 
               <div>
                 <dt>
-                  Related credentials
+                  Related
+                  credentials
                 </dt>
 
                 <dd>
                   {Number(
-                    credentials.data
+                    credentials
+                      .data
                       ?.pagination
                       ?.total ??
-                      credentials.data
+                      credentials
+                        .data
                         ?.total ??
                       0
                   )}
@@ -1413,11 +2499,14 @@ export function StudentDetail() {
 
               <div>
                 <dt>
-                  Student login account
+                  Student
+                  login
+                  account
                 </dt>
 
                 <dd>
-                  {record.user_id
+                  {record
+                    .user_id
                     ? "Linked"
                     : "Not linked"}
                 </dd>
@@ -1430,7 +2519,8 @@ export function StudentDetail() {
 
                 <dd>
                   {String(
-                    record.created_at ||
+                    record
+                      .created_at ||
                       ""
                   ).slice(
                     0,
@@ -1444,7 +2534,10 @@ export function StudentDetail() {
               !record.user_id && (
                 <>
                   <label>
-                    Link student login account
+                    Link
+                    student
+                    login
+                    account
 
                     <select
                       aria-label="Student login account"
@@ -1452,19 +2545,26 @@ export function StudentDetail() {
                         accountUserId
                       }
                       disabled={
-                        studentAccounts.isLoading ||
-                        linkAccount.isPending
+                        studentAccounts
+                          .isLoading ||
+                        linkAccount
+                          .isPending
                       }
                       onChange={(
                         event
                       ) =>
                         setAccountUserId(
-                          event.target.value
+                          event
+                            .target
+                            .value
                         )
                       }
                     >
                       <option value="">
-                        Select active student account
+                        Select
+                        active
+                        student
+                        account
                       </option>
 
                       {eligibleStudentAccounts.map(
@@ -1481,15 +2581,20 @@ export function StudentDetail() {
                             )}
                           >
                             {String(
-                              account.fullName ??
-                                account.full_name ??
-                                account.email ??
+                              account
+                                .fullName ??
+                                account
+                                  .full_name ??
+                                account
+                                  .email ??
                                 "Student account"
                             )}
 
-                            {account.email
+                            {account
+                              .email
                               ? ` — ${String(
-                                  account.email
+                                  account
+                                    .email
                                 )}`
                               : ""}
                           </option>
@@ -1498,25 +2603,43 @@ export function StudentDetail() {
                     </select>
                   </label>
 
-                  {!studentAccounts.isLoading &&
-                    eligibleStudentAccounts.length ===
+                  {!studentAccounts
+                    .isLoading &&
+                    eligibleStudentAccounts
+                      .length ===
                       0 && (
                       <p className="notice">
-                        No eligible active
-                        student account is
-                        currently available
-                        for this institution.
-                        Create the student
-                        user account first,
-                        then return here to
-                        link it.
+                        No
+                        eligible
+                        active
+                        student
+                        account
+                        is
+                        currently
+                        available
+                        for
+                        this
+                        institution.
+                        Create
+                        the
+                        student
+                        user
+                        account
+                        first,
+                        then
+                        return
+                        here
+                        to
+                        link
+                        it.
                       </p>
                     )}
 
                   <Button
                     disabled={
                       !accountUserId ||
-                      linkAccount.isPending
+                      linkAccount
+                        .isPending
                     }
                     onClick={() => {
                       if (
@@ -1533,37 +2656,51 @@ export function StudentDetail() {
                       if (
                         confirmed
                       ) {
-                        linkAccount.mutate(
-                          accountUserId
-                        );
+                        linkAccount
+                          .mutate(
+                            accountUserId
+                          );
                       }
                     }}
                   >
-                    {linkAccount.isPending
+                    {linkAccount
+                      .isPending
                       ? "Linking…"
                       : "Link account"}
                   </Button>
                 </>
               )}
 
-          {canLinkAccount &&
-  Boolean(record.user_id) && (
-    <p className="notice">
-      A student login account is already linked to this student record.
-    </p>
-  )}
+            {canLinkAccount &&
+              Boolean(
+                record
+                  .user_id
+              ) && (
+                <p className="notice">
+                  A student
+                  login
+                  account is
+                  already
+                  linked to
+                  this
+                  student
+                  record.
+                </p>
+              )}
 
             {user?.role ===
               "super_admin" && (
               <label>
-                Reassign institution
+                Reassign
+                institution
 
                 <select
                   aria-label="Reassign institution"
                   value={
                     institutionChange ||
                     String(
-                      record.institution_id ||
+                      record
+                        .institution_id ||
                         ""
                     )
                   }
@@ -1571,7 +2708,9 @@ export function StudentDetail() {
                     event
                   ) =>
                     setInstitutionChange(
-                      event.target.value
+                      event
+                        .target
+                        .value
                     )
                   }
                 >
@@ -1579,7 +2718,9 @@ export function StudentDetail() {
                     value=""
                     disabled
                   >
-                    Select active institution
+                    Select
+                    active
+                    institution
                   </option>
 
                   {(
@@ -1615,13 +2756,17 @@ export function StudentDetail() {
             className="notice error"
             role="alert"
           >
-            {error}
+            {
+              error
+            }
           </div>
         )}
 
         {message && (
           <div className="notice success">
-            {message}
+            {
+              message
+            }
           </div>
         )}
       </State>
@@ -1630,7 +2775,8 @@ export function StudentDetail() {
         open={Boolean(
           institutionChange &&
             institutionChange !==
-              record.institution_id
+              record
+                .institution_id
         )}
         title="Reassign this student?"
         onCancel={() =>
@@ -1649,32 +2795,40 @@ export function StudentDetail() {
         }}
       >
         <p>
-          Reassignment is allowed
-          only when the student has
-          no credential history.
-          Existing credentials are
-          never moved or rewritten.
+          Reassignment
+          is allowed
+          only when
+          the student
+          has no
+          credential
+          history.
+          Existing
+          credentials
+          are never
+          moved or
+          rewritten.
         </p>
       </ConfirmDialog>
     </div>
   );
 }
 
-
-/*
- * Builds the public verification URL from the public token
- * returned by the credential API.
- *
- * The QR is generated in the browser instead of attempting
- * to display the backend's local qr_code_path as a web URL.
- */
 function CredentialPublicVerification({
   publicToken,
 }: {
   publicToken: string;
 }) {
-  const [qrSrc, setQrSrc] = useState("");
-  const [copied, setCopied] = useState(false);
+  const [
+    qrSrc,
+    setQrSrc,
+  ] = useState("");
+
+  const [
+    copied,
+    setCopied,
+  ] = useState(
+    false
+  );
 
   const verificationUrl =
     `${window.location.origin}/verify/token/${encodeURIComponent(
@@ -1682,77 +2836,126 @@ function CredentialPublicVerification({
     )}`;
 
   useEffect(() => {
-    let mounted = true;
+    let mounted =
+      true;
 
-    QRCode.toDataURL(
-      verificationUrl,
-      {
-        errorCorrectionLevel: "M",
-        margin: 2,
-        width: 320,
-      }
-    )
-      .then((dataUrl) => {
-        if (mounted) {
-          setQrSrc(dataUrl);
+    QRCode
+      .toDataURL(
+        verificationUrl,
+        {
+          errorCorrectionLevel:
+            "M",
+
+          margin:
+            2,
+
+          width:
+            320,
         }
-      })
-      .catch(() => {
-        if (mounted) {
-          setQrSrc("");
+      )
+      .then(
+        (
+          dataUrl
+        ) => {
+          if (
+            mounted
+          ) {
+            setQrSrc(
+              dataUrl
+            );
+          }
         }
-      });
+      )
+      .catch(
+        () => {
+          if (
+            mounted
+          ) {
+            setQrSrc(
+              ""
+            );
+          }
+        }
+      );
 
     return () => {
-      mounted = false;
+      mounted =
+        false;
     };
-  }, [verificationUrl]);
+  }, [
+    verificationUrl,
+  ]);
 
-  const copyToken = async () => {
-    try {
-      await navigator.clipboard.writeText(
-        publicToken
-      );
+  const copyToken =
+    async () => {
+      try {
+        await navigator
+          .clipboard
+          .writeText(
+            publicToken
+          );
 
-      setCopied(true);
+        setCopied(
+          true
+        );
 
-      window.setTimeout(() => {
-        setCopied(false);
-      }, 2000);
-    } catch {
-      setCopied(false);
-    }
-  };
+        window.setTimeout(
+          () => {
+            setCopied(
+              false
+            );
+          },
+          2000
+        );
+      } catch {
+        setCopied(
+          false
+        );
+      }
+    };
 
-  const copyUrl = async () => {
-    try {
-      await navigator.clipboard.writeText(
-        verificationUrl
-      );
-    } catch {
-      // Clipboard access may be unavailable in some browsers.
-    }
-  };
+  const copyUrl =
+    async () => {
+      try {
+        await navigator
+          .clipboard
+          .writeText(
+            verificationUrl
+          );
+      } catch {
+        // Clipboard access may be unavailable.
+      }
+    };
 
   return (
     <div>
       <dl>
         <div>
-          <dt>Public token</dt>
+          <dt>
+            Public token
+          </dt>
 
           <dd>
             <code>
-              {publicToken}
+              {
+                publicToken
+              }
             </code>
           </dd>
         </div>
 
         <div>
-          <dt>Public verification URL</dt>
+          <dt>
+            Public
+            verification
+            URL
+          </dt>
 
           <dd>
             <code>
-              {verificationUrl}
+              {
+                verificationUrl
+              }
             </code>
           </dd>
         </div>
@@ -1761,12 +2964,16 @@ function CredentialPublicVerification({
       {qrSrc ? (
         <img
           className="qr"
-          src={qrSrc}
+          src={
+            qrSrc
+          }
           alt="Credential verification QR code"
         />
       ) : (
         <div className="notice">
-          Preparing verification QR code…
+          Preparing
+          verification
+          QR code…
         </div>
       )}
 
@@ -1790,16 +2997,21 @@ function CredentialPublicVerification({
             void copyUrl();
           }}
         >
-          Copy verification URL
+          Copy
+          verification
+          URL
         </button>
 
         <a
           className="button"
-          href={verificationUrl}
+          href={
+            verificationUrl
+          }
           target="_blank"
           rel="noopener noreferrer"
         >
-          Open public verification
+          Open public
+          verification
         </a>
       </div>
     </div>
@@ -1807,154 +3019,463 @@ function CredentialPublicVerification({
 }
 
 export function CredentialDetail() {
-  const { id } = useParams();
-  const { user } = useAuth();
-  const qc = useQueryClient();
+  const {
+    id,
+  } = useParams();
 
-  const [open, setOpen] = useState(false);
-  const [reason, setReason] = useState("");
-  const [supersedeOpen, setSupersedeOpen] = useState(false);
-  const [replacementCredentialId, setReplacementCredentialId] = useState("");
-  const [supersessionReason, setSupersessionReason] = useState("");
-  const [replacementPage, setReplacementPage] = useState(1);
-  const [correctionMessage, setCorrectionMessage] = useState("");
-  const [correctionError, setCorrectionError] = useState("");
+  const {
+    user,
+  } = useAuth();
+
+  const qc =
+    useQueryClient();
+
+  const [
+    open,
+    setOpen,
+  ] = useState(
+    false
+  );
+
+  const [
+    reason,
+    setReason,
+  ] = useState("");
+
+  const [
+    supersedeOpen,
+    setSupersedeOpen,
+  ] = useState(
+    false
+  );
+
+  const [
+    replacementCredentialId,
+    setReplacementCredentialId,
+  ] = useState("");
+
+  const [
+    supersessionReason,
+    setSupersessionReason,
+  ] = useState("");
+
+  const [
+    correctionMessage,
+    setCorrectionMessage,
+  ] = useState("");
+
+  const [
+    correctionError,
+    setCorrectionError,
+  ] = useState("");
 
   useEffect(() => {
-    setSupersedeOpen(false);
-    setReplacementCredentialId("");
-    setSupersessionReason("");
-    setCorrectionMessage("");
-    setCorrectionError("");
-    setReplacementPage(1);
-  }, [id]);
+    setOpen(
+      false
+    );
 
-  const q = useQuery({
-    queryKey: ["credentials", id],
+    setReason(
+      ""
+    );
 
-    queryFn: async () => {
-      const r = await api.get(
-        `/credentials/${id}`
-      );
+    setSupersedeOpen(
+      false
+    );
 
-      return r.data.credential;
-    },
-  });
+    setReplacementCredentialId(
+      ""
+    );
 
-  /*
-   * Revocation requires a Sepolia transaction plus status-list
-   * publication, so it receives the same blockchain-safe timeout
-   * as issuance.
-   */
-  const revoke = useMutation({
-    mutationFn: () =>
-      api.patch(
-        `/credentials/${id}/revoke`,
-        {
-          reason,
+    setSupersessionReason(
+      ""
+    );
+
+    setCorrectionMessage(
+      ""
+    );
+
+    setCorrectionError(
+      ""
+    );
+  }, [
+    id,
+  ]);
+
+  const q =
+    useQuery({
+      queryKey: [
+        "credentials",
+        id,
+      ],
+
+      queryFn:
+        async () => {
+          const response =
+            await api.get(
+              `/credentials/${id}`
+            );
+
+          return response
+            .data
+            .credential;
         },
-        {
-          timeout: 120000,
-        }
-      ),
+    });
 
-    onSuccess: () => {
-      setOpen(false);
-      setReason("");
+  const c =
+    (
+      q.data ||
+      {}
+    ) as JsonRecord;
 
-      void qc.invalidateQueries({
-        queryKey: [
-          "credentials",
-          id,
-        ],
-      });
+  const canGeneratePdf =
+    [
+      "super_admin",
+      "institution_admin",
+      "issuer",
+    ].includes(
+      user?.role ||
+        ""
+    );
 
-      void qc.invalidateQueries({
-        queryKey: ["credentials"],
-      });
-    },
-  });
+  const canRevoke =
+    c.status ===
+      "active" &&
+    [
+      "super_admin",
+      "institution_admin",
+    ].includes(
+      user?.role ||
+        ""
+    );
 
-  const pdf = useMutation({
-    mutationFn: () =>
-      api.post(
-        `/credentials/${id}/generate-pdf`
-      ),
-  });
+  const canSupersede =
+    c.status ===
+      "active" &&
+    [
+      "super_admin",
+      "institution_admin",
+      "issuer",
+    ].includes(
+      user?.role ||
+        ""
+    );
 
-  const download = useMutation({
-    mutationFn: () =>
-      downloadBlob(
-        `/credentials/${id}/pdf`,
-        `credential-${id}.pdf`
-      ),
-  });
+  const replacements =
+    useQuery({
+      queryKey: [
+        "credentials",
+        "replacement-candidates",
+        id,
+        c.student_id,
+        c.institution_id,
+      ],
 
-  const c = (q.data || {}) as JsonRecord;
+      enabled:
+        Boolean(
+          q.data
+        ) &&
+        Boolean(
+          c.student_id
+        ) &&
+        canSupersede &&
+        supersedeOpen,
 
-  const canSupersede = c.status === "active" &&
-    ["super_admin", "institution_admin", "issuer"].includes(user?.role || "");
-  const replacements = useQuery({
-    queryKey: ["credentials", "replacement-candidates", id, c.student_id, c.institution_id, replacementPage],
-    enabled: Boolean(q.data && c.student_id && canSupersede && supersedeOpen),
-    queryFn: async () => (await api.get("/credentials", {
-      params: {
-        studentId: c.student_id,
-        institutionId: c.institution_id,
-        status: "active",
-        page: replacementPage,
-        limit: 100,
-      },
-    })).data,
-  });
-  const candidates = ((replacements.data?.credentials || []) as JsonRecord[]).filter(
-    (candidate) => candidate.id !== id && candidate.status === "active" &&
-      candidate.student_id === c.student_id && candidate.institution_id === c.institution_id
-  );
-  const supersede = useMutation({
-    mutationFn: () => api.patch(`/credentials/${id}/supersede`, {
-      replacementCredentialId,
-      reason: supersessionReason.trim(),
-    }, {
-      // Signed status publication anchors on-chain, as with revocation.
-      timeout: 120000,
-    }),
-    onSuccess: () => {
-      setSupersedeOpen(false);
-      setReplacementCredentialId("");
-      setSupersessionReason("");
-      setCorrectionError("");
-      setCorrectionMessage("Credential superseded successfully. The replacement remains the current credential.");
-      void qc.invalidateQueries({ queryKey: ["credentials", id] });
-      void qc.invalidateQueries({ queryKey: ["credentials"] });
-      void qc.invalidateQueries({ queryKey: ["my-credentials"] });
-    },
-    onError: (error: { message?: string }) => {
-      setCorrectionError(error.message || "Unable to supersede credential.");
-    },
-  });
+      queryFn:
+        async () =>
+          (
+            await api.get(
+              "/credentials",
+              {
+                params: {
+                  studentId:
+                    c.student_id,
+
+                  institutionId:
+                    c.institution_id,
+
+                  status:
+                    "active",
+
+                  page:
+                    1,
+
+                  limit:
+                    100,
+                },
+              }
+            )
+          ).data,
+    });
+
+  const candidates =
+    (
+      (
+        replacements
+          .data
+          ?.credentials ||
+        []
+      ) as JsonRecord[]
+    ).filter(
+      (
+        candidate
+      ) => {
+        const candidateId =
+          String(
+            candidate.id ||
+              ""
+          );
+
+        const candidateStudentId =
+          String(
+            candidate
+              .student_id ||
+              ""
+          );
+
+        const candidateInstitutionId =
+          String(
+            candidate
+              .institution_id ||
+              ""
+          );
+
+        return (
+          candidateId !==
+            String(
+              id ||
+                ""
+            ) &&
+          candidate
+            .status ===
+            "active" &&
+          candidateStudentId ===
+            String(
+              c.student_id ||
+                ""
+            ) &&
+          candidateInstitutionId ===
+            String(
+              c.institution_id ||
+                ""
+            )
+        );
+      }
+    );
+
+  const revoke =
+    useMutation({
+      mutationFn:
+        () =>
+          api.patch(
+            `/credentials/${id}/revoke`,
+            {
+              reason,
+            },
+            {
+              timeout:
+                120000,
+            }
+          ),
+
+      onSuccess:
+        () => {
+          setOpen(
+            false
+          );
+
+          setReason(
+            ""
+          );
+
+          void qc
+            .invalidateQueries(
+              {
+                queryKey: [
+                  "credentials",
+                  id,
+                ],
+              }
+            );
+
+          void qc
+            .invalidateQueries(
+              {
+                queryKey: [
+                  "credentials",
+                ],
+              }
+            );
+
+          void qc
+            .invalidateQueries(
+              {
+                queryKey: [
+                  "my-credentials",
+                ],
+              }
+            );
+        },
+    });
+
+  const supersede =
+    useMutation({
+      mutationFn:
+        () =>
+          api.patch(
+            `/credentials/${id}/supersede`,
+            {
+              replacementCredentialId,
+              reason:
+                supersessionReason
+                  .trim(),
+            },
+            {
+              timeout:
+                120000,
+            }
+          ),
+
+      onMutate:
+        () => {
+          setCorrectionMessage(
+            ""
+          );
+
+          setCorrectionError(
+            ""
+          );
+        },
+
+      onSuccess:
+        () => {
+          setSupersedeOpen(
+            false
+          );
+
+          setReplacementCredentialId(
+            ""
+          );
+
+          setSupersessionReason(
+            ""
+          );
+
+          setCorrectionError(
+            ""
+          );
+
+          setCorrectionMessage(
+            "Credential superseded successfully. The replacement remains the current credential."
+          );
+
+          void qc
+            .invalidateQueries(
+              {
+                queryKey: [
+                  "credentials",
+                  id,
+                ],
+              }
+            );
+
+          void qc
+            .invalidateQueries(
+              {
+                queryKey: [
+                  "credentials",
+                ],
+              }
+            );
+
+          void qc
+            .invalidateQueries(
+              {
+                queryKey: [
+                  "my-credentials",
+                ],
+              }
+            );
+
+          void q.refetch();
+        },
+
+      onError:
+        (
+          value: {
+            message?: string;
+          }
+        ) => {
+          setCorrectionError(
+            value.message ||
+              "Unable to supersede credential."
+          );
+        },
+    });
+
+  const pdf =
+    useMutation({
+      mutationFn:
+        () =>
+          api.post(
+            `/credentials/${id}/generate-pdf`
+          ),
+    });
+
+  const download =
+    useMutation({
+      mutationFn:
+        () =>
+          downloadBlob(
+            `/credentials/${id}/pdf`,
+            `credential-${id}.pdf`
+          ),
+    });
 
   const publicToken =
-    typeof c.public_token === "string"
+    typeof c
+      .public_token ===
+    "string"
       ? c.public_token
       : "";
 
-  const explorer = String(
-    import.meta.env.VITE_BLOCK_EXPLORER_URL || ""
-  ).replace(/\/$/, "");
+  const explorer =
+    String(
+      import.meta
+        .env
+        .VITE_BLOCK_EXPLORER_URL ||
+        ""
+    ).replace(
+      /\/$/,
+      ""
+    );
 
-  const gateway = String(
-    import.meta.env.VITE_IPFS_GATEWAY || ""
-  ).replace(/\/$/, "");
+  const gateway =
+    String(
+      import.meta
+        .env
+        .VITE_IPFS_GATEWAY ||
+        ""
+    ).replace(
+      /\/$/,
+      ""
+    );
 
   return (
     <div className="page">
-      <h1>Credential details</h1>
+      <h1>
+        Credential details
+      </h1>
 
       <State
-        loading={q.isLoading}
-        error={q.error}
-        empty={!q.data}
+        loading={
+          q.isLoading
+        }
+        error={
+          q.error
+        }
+        empty={
+          !q.data
+        }
       >
         <Card>
           <Badge
@@ -1980,11 +3501,20 @@ export function CredentialDetail() {
               "revocation_reason",
               "revoked_at",
             ].map(
-              (k) =>
-                c[k] != null && (
-                  <div key={k}>
+              (
+                key
+              ) =>
+                c[
+                  key
+                ] !=
+                  null && (
+                  <div
+                    key={
+                      key
+                    }
+                  >
                     <dt>
-                      {k.replaceAll(
+                      {key.replaceAll(
                         "_",
                         " "
                       )}
@@ -1992,7 +3522,11 @@ export function CredentialDetail() {
 
                     <dd>
                       <code>
-                        {String(c[k])}
+                        {String(
+                          c[
+                            key
+                          ]
+                        )}
                       </code>
                     </dd>
                   </div>
@@ -2000,38 +3534,161 @@ export function CredentialDetail() {
             )}
           </dl>
 
-          {c.status === "superseded" && (
-            <section aria-label="Supersession history" className="notice">
-              <p>This credential has been superseded and is no longer the current credential.</p>
+          {c.status ===
+            "superseded" && (
+            <section
+              aria-label="Supersession history"
+              className="notice"
+            >
+              <p>
+                This
+                credential
+                has been
+                superseded
+                and is no
+                longer the
+                current
+                credential.
+              </p>
+
               <dl>
-                <div><dt>Superseded at</dt><dd>{String(c.superseded_at || "Not available")}</dd></div>
-                <div><dt>Supersession reason</dt><dd>{String(c.supersession_reason || "Not available")}</dd></div>
-                <div><dt>Replacement credential</dt><dd>{String(c.superseded_by || "Not available")}</dd></div>
+                <div>
+                  <dt>
+                    Superseded
+                    at
+                  </dt>
+
+                  <dd>
+                    {c
+                      .superseded_at
+                      ? new Date(
+                          String(
+                            c
+                              .superseded_at
+                          )
+                        ).toLocaleString()
+                      : "Not available"}
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>
+                    Supersession
+                    reason
+                  </dt>
+
+                  <dd>
+                    {String(
+                      c
+                        .supersession_reason ||
+                        "Not available"
+                    )}
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>
+                    Replacement
+                    credential
+                  </dt>
+
+                  <dd>
+                    {String(
+                      c
+                        .superseded_by ||
+                        "Not available"
+                    )}
+                  </dd>
+                </div>
               </dl>
-              {typeof c.superseded_by === "string" && c.superseded_by && (
-                <Link to={`/app/credentials/${encodeURIComponent(c.superseded_by)}`}>Open replacement credential</Link>
-              )}
-            </section>
-          )}
-          {typeof c.supersedes_credential_id === "string" && c.supersedes_credential_id && (
-            <section aria-label="Original credential" className="notice">
-              <p>This credential is the replacement for a previous credential.</p>
-              <p>Original credential: {c.supersedes_credential_id}</p>
-              <Link to={`/app/credentials/${encodeURIComponent(c.supersedes_credential_id)}`}>Open original credential</Link>
+
+              {typeof c
+                .superseded_by ===
+                "string" &&
+                c
+                  .superseded_by && (
+                  <Link
+                    className="button"
+                    to={`/app/credentials/${encodeURIComponent(
+                      c
+                        .superseded_by
+                    )}`}
+                  >
+                    Open
+                    replacement
+                    credential
+                  </Link>
+                )}
             </section>
           )}
 
+          {typeof c
+            .supersedes_credential_id ===
+            "string" &&
+            c
+              .supersedes_credential_id && (
+              <section
+                aria-label="Original credential"
+                className="notice"
+              >
+                <p>
+                  This
+                  credential
+                  is the
+                  replacement
+                  for a
+                  previous
+                  credential.
+                </p>
+
+                <p>
+                  Original
+                  credential:{" "}
+                  <code>
+                    {
+                      c
+                        .supersedes_credential_id
+                    }
+                  </code>
+                </p>
+
+                <Link
+                  className="button"
+                  to={`/app/credentials/${encodeURIComponent(
+                    c
+                      .supersedes_credential_id
+                  )}`}
+                >
+                  Open
+                  original
+                  credential
+                </Link>
+              </section>
+            )}
+
           {publicToken ? (
             <CredentialPublicVerification
-              publicToken={publicToken}
+              publicToken={
+                publicToken
+              }
             />
-          ) : String(c.status) === "active" ? (
+          ) : c.status ===
+            "active" ? (
             <div
               className="notice error"
               role="alert"
             >
-              This active credential does not have a public verification
-              token. Check the credential API response before using QR
+              This active
+              credential
+              does not have
+              a public
+              verification
+              token. Check
+              the
+              credential
+              API response
+              before using
+              QR
               verification.
             </div>
           ) : null}
@@ -2051,7 +3708,8 @@ export function CredentialDetail() {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                View IPFS evidence
+                View IPFS
+                evidence
               </a>
             )}
 
@@ -2069,22 +3727,19 @@ export function CredentialDetail() {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                View transaction
+                View
+                transaction
               </a>
             )}
 
-            {[
-              "super_admin",
-              "institution_admin",
-              "issuer",
-            ].includes(
-              user?.role || ""
-            ) && (
+            {canGeneratePdf && (
               <Button
                 onClick={() =>
                   pdf.mutate()
                 }
-                disabled={pdf.isPending}
+                disabled={
+                  pdf.isPending
+                }
               >
                 {pdf.isPending
                   ? "Generating…"
@@ -2096,47 +3751,93 @@ export function CredentialDetail() {
               onClick={() =>
                 download.mutate()
               }
-              disabled={download.isPending}
+              disabled={
+                download.isPending
+              }
             >
               {download.isPending
                 ? "Downloading…"
                 : "Download presentation PDF"}
             </Button>
 
-            {c.status === "active" &&
-              [
-                "super_admin",
-                "institution_admin",
-              ].includes(
-                user?.role || ""
-              ) && (
-                <Button
-                  className="danger"
-                  onClick={() => {
-                    setReason("");
-                    setOpen(true);
-                  }}
-                >
-                  Revoke credential
-                </Button>
-              )}
+            {canSupersede && (
+              <Button
+                disabled={
+                  supersede
+                    .isPending ||
+                  revoke
+                    .isPending
+                }
+                onClick={() => {
+                  setReplacementCredentialId(
+                    ""
+                  );
+
+                  setSupersessionReason(
+                    ""
+                  );
+
+                  setCorrectionError(
+                    ""
+                  );
+
+                  setCorrectionMessage(
+                    ""
+                  );
+
+                  setSupersedeOpen(
+                    true
+                  );
+                }}
+              >
+                Correct /
+                supersede
+                credential
+              </Button>
+            )}
+
+            {canRevoke && (
+              <Button
+                className="danger"
+                disabled={
+                  revoke
+                    .isPending ||
+                  supersede
+                    .isPending
+                }
+                onClick={() => {
+                  setReason(
+                    ""
+                  );
+
+                  setOpen(
+                    true
+                  );
+                }}
+              >
+                Revoke
+                credential
+              </Button>
+            )}
           </div>
 
-          {canSupersede && (
-            <Button disabled={supersede.isPending || revoke.isPending} onClick={() => {
-              setReplacementCredentialId("");
-              setSupersessionReason("");
-              setCorrectionError("");
-              setCorrectionMessage("");
-              setReplacementPage(1);
-              setSupersedeOpen(true);
-            }}>Correct / supersede credential</Button>
+          {correctionMessage && (
+            <div
+              className="notice success"
+              role="status"
+            >
+              {
+                correctionMessage
+              }
+            </div>
           )}
-          {correctionMessage && <div className="notice success" role="status">{correctionMessage}</div>}
 
           {pdf.isSuccess && (
             <div className="notice success">
-              Certificate generation confirmed by the API.
+              Certificate
+              generation
+              confirmed
+              by the API.
             </div>
           )}
 
@@ -2167,131 +3868,336 @@ export function CredentialDetail() {
       </State>
 
       <ConfirmDialog
-        open={supersedeOpen}
+        open={
+          supersedeOpen
+        }
         title="Correct / supersede this credential?"
         onCancel={() => {
-          if (supersede.isPending) return;
-          setSupersedeOpen(false);
-          setReplacementCredentialId("");
-          setSupersessionReason("");
-          setCorrectionError("");
+          if (
+            supersede
+              .isPending
+          ) {
+            return;
+          }
+
+          setSupersedeOpen(
+            false
+          );
+
+          setReplacementCredentialId(
+            ""
+          );
+
+          setSupersessionReason(
+            ""
+          );
+
+          setCorrectionError(
+            ""
+          );
         }}
         onConfirm={() => {
-          if (!replacementCredentialId || supersessionReason.trim().length < 5 || supersede.isPending) return;
+          if (
+            !replacementCredentialId ||
+            supersessionReason
+              .trim()
+              .length <
+              5 ||
+            supersede
+              .isPending
+          ) {
+            return;
+          }
+
           supersede.mutate();
         }}
       >
         <p>
-          This action marks the current credential as SUPERSEDED.
-          The selected replacement remains the current credential.
-          The old credential is retained for audit and verification history.
+          This marks
+          the current
+          credential as
+          SUPERSEDED.
+          The selected
+          replacement
+          remains the
+          current
+          credential.
+          The old
+          credential is
+          retained for
+          audit and
+          verification
+          history.
         </p>
+
         <label>
-          Replacement credential
+          Replacement
+          credential
+
           <select
             aria-label="Replacement credential"
-            value={replacementCredentialId}
-            disabled={replacements.isLoading || supersede.isPending}
-            onChange={(event) => setReplacementCredentialId(event.target.value)}
+            value={
+              replacementCredentialId
+            }
+            disabled={
+              replacements
+                .isLoading ||
+              supersede
+                .isPending
+            }
+            onChange={(
+              event
+            ) =>
+              setReplacementCredentialId(
+                event
+                  .target
+                  .value
+              )
+            }
           >
-            <option value="">Select an active replacement</option>
-            {candidates.map((candidate) => (
-              <option key={String(candidate.id)} value={String(candidate.id)}>
-                {String(candidate.qualification || "Credential")} —{" "}
-                {String(candidate.issue_date || "").slice(0, 10)} —{" "}
-                {String(candidate.id)}
-              </option>
-            ))}
+            <option value="">
+              Select an
+              active
+              replacement
+            </option>
+
+            {candidates.map(
+              (
+                candidate
+              ) => (
+                <option
+                  key={String(
+                    candidate.id
+                  )}
+                  value={String(
+                    candidate.id
+                  )}
+                >
+                  {String(
+                    candidate
+                      .qualification ||
+                      "Credential"
+                  )}{" "}
+                  —{" "}
+                  {String(
+                    candidate
+                      .issue_date ||
+                      ""
+                  ).slice(
+                    0,
+                    10
+                  )}{" "}
+                  —{" "}
+                  {String(
+                    candidate.id
+                  )}
+                </option>
+              )
+            )}
           </select>
         </label>
+
         {replacements.isLoading && (
-          <div className="notice">Loading eligible replacement credentials…</div>
-        )}
-        {!replacements.isLoading && !replacements.error && candidates.length === 0 && (
           <div className="notice">
-            No other active credential is currently available for this student.
-            Issue the corrected credential first, then return here to link it as
-            the replacement.
+            Loading
+            eligible
+            replacement
+            credentials…
           </div>
         )}
+
+        {!replacements
+          .isLoading &&
+          !replacements
+            .error &&
+          candidates
+            .length ===
+            0 && (
+            <div className="notice">
+              No other
+              active
+              credential
+              is
+              currently
+              available
+              for this
+              student.
+              Issue the
+              corrected
+              credential
+              first, then
+              return here
+              to link it
+              as the
+              replacement.
+            </div>
+          )}
+
         {replacements.error && (
-          <div className="notice error" role="alert">
-            {(replacements.error as { message?: string }).message ||
+          <div
+            className="notice error"
+            role="alert"
+          >
+            {(replacements.error as {
+              message?: string;
+            }).message ||
               "Unable to load replacement credentials."}
           </div>
         )}
+
         <label>
-          Correction / supersession reason
+          Correction /
+          supersession
+          reason
+
           <textarea
             aria-label="Supersession reason"
-            value={supersessionReason}
-            minLength={5}
-            maxLength={1000}
+            value={
+              supersessionReason
+            }
+            minLength={
+              5
+            }
+            maxLength={
+              1000
+            }
             required
-            onChange={(event) => setSupersessionReason(event.target.value)}
+            onChange={(
+              event
+            ) =>
+              setSupersessionReason(
+                event
+                  .target
+                  .value
+              )
+            }
           />
         </label>
-        {supersessionReason.length > 0 && supersessionReason.trim().length < 5 && (
-          <div className="notice error">Supersession reason must be at least 5 characters.</div>
-        )}
+
+        {supersessionReason
+          .length >
+          0 &&
+          supersessionReason
+            .trim()
+            .length <
+            5 && (
+            <div className="notice error">
+              Supersession
+              reason must
+              be at least
+              5
+              characters.
+            </div>
+          )}
+
         {supersede.isPending && (
           <div className="notice">
-            Publishing the supersession status and waiting for confirmation…
+            Publishing
+            the
+            supersession
+            status and
+            waiting for
+            confirmation…
           </div>
         )}
+
         {correctionError && (
-          <div className="notice error" role="alert">{correctionError}</div>
+          <div
+            className="notice error"
+            role="alert"
+          >
+            {
+              correctionError
+            }
+          </div>
         )}
       </ConfirmDialog>
 
       <ConfirmDialog
-        open={open}
+        open={
+          open
+        }
         title="Revoke this credential?"
         onCancel={() => {
-          setOpen(false);
-          setReason("");
+          setOpen(
+            false
+          );
+
+          setReason(
+            ""
+          );
         }}
         onConfirm={() => {
           if (
-            reason.trim().length >= 5 &&
-            !revoke.isPending
+            reason
+              .trim()
+              .length >=
+              5 &&
+            !revoke
+              .isPending
           ) {
-            revoke.mutate();
+            revoke
+              .mutate();
           }
         }}
       >
         <p>
-          This action is permanent and requires a confirmed blockchain
+          This action
+          is permanent
+          and requires
+          a confirmed
+          blockchain
           transaction.
         </p>
 
         <label>
-          Revocation reason
+          Revocation
+          reason
 
           <textarea
             aria-label="Revocation reason"
-            value={reason}
-            minLength={5}
-            maxLength={1000}
-            onChange={(e) =>
+            value={
+              reason
+            }
+            minLength={
+              5
+            }
+            maxLength={
+              1000
+            }
+            onChange={(
+              event
+            ) =>
               setReason(
-                e.target.value
+                event
+                  .target
+                  .value
               )
             }
             required
           />
         </label>
 
-        {reason.length > 0 &&
-          reason.trim().length < 5 && (
+        {reason.length >
+          0 &&
+          reason
+            .trim()
+            .length <
+            5 && (
             <div className="notice error">
-              Revocation reason must be at least 5 characters.
+              Revocation
+              reason
+              must be at
+              least 5
+              characters.
             </div>
           )}
 
         {revoke.isPending && (
           <div className="notice">
-            Waiting for blockchain confirmation…
+            Waiting for
+            blockchain
+            confirmation…
           </div>
         )}
 
@@ -2312,30 +4218,53 @@ export function CredentialDetail() {
 }
 
 export function Profile() {
-  const { user } = useAuth();
+  const {
+    user,
+  } = useAuth();
 
   return (
     <div className="page narrow">
-      <h1>Your profile</h1>
+      <h1>
+        Your profile
+      </h1>
 
       <Card>
         <dl>
           <div>
-            <dt>Name</dt>
-            <dd>{user?.fullName}</dd>
+            <dt>
+              Name
+            </dt>
+
+            <dd>
+              {
+                user?.fullName
+              }
+            </dd>
           </div>
 
           <div>
-            <dt>Email</dt>
-            <dd>{user?.email}</dd>
+            <dt>
+              Email
+            </dt>
+
+            <dd>
+              {
+                user?.email
+              }
+            </dd>
           </div>
 
           <div>
-            <dt>Role</dt>
+            <dt>
+              Role
+            </dt>
 
             <dd>
               <Badge
-                value={user?.role || ""}
+                value={
+                  user?.role ||
+                  ""
+                }
               />
             </dd>
           </div>
@@ -2345,7 +4274,8 @@ export function Profile() {
           className="button"
           to="/app/change-password"
         >
-          Change password
+          Change
+          password
         </Link>
       </Card>
     </div>
@@ -2353,9 +4283,16 @@ export function Profile() {
 }
 
 export function UserDetail() {
-  const { id } = useParams();
-  const { user: actor } = useAuth();
-  const queryClient = useQueryClient();
+  const {
+    id,
+  } = useParams();
+
+  const {
+    user: actor,
+  } = useAuth();
+
+  const queryClient =
+    useQueryClient();
 
   const [
     confirm,
@@ -2364,117 +4301,176 @@ export function UserDetail() {
     title: string;
     path: string;
     body?: JsonRecord;
-  } | null>(null);
+  } | null>(
+    null
+  );
 
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [
+    message,
+    setMessage,
+  ] = useState("");
 
-  const query = useQuery({
-    queryKey: [
-      "users",
-      id,
-    ],
+  const [
+    error,
+    setError,
+  ] = useState("");
 
-    queryFn: async () =>
-      (
-        await api.get(
-          `/users/${id}`
-        )
-      ).data.user,
-  });
+  const query =
+    useQuery({
+      queryKey: [
+        "users",
+        id,
+      ],
 
-  const institutions = useQuery({
-    queryKey: [
-      "institutions",
-      "user-edit",
-    ],
-
-    queryFn: async () =>
-      (
-        await api.get(
-          "/institutions",
-          {
-            params: {
-              limit: 100,
-              status: "active",
-            },
-          }
-        )
-      ).data.institutions || [],
-
-    enabled:
-      actor?.role ===
-      "super_admin",
-  });
-
-  const complete = (text: string) => {
-    setConfirm(null);
-    setMessage(text);
-    setError("");
-
-    void query.refetch();
-
-    void queryClient.invalidateQueries({
-      queryKey: ["users"],
+      queryFn:
+        async () =>
+          (
+            await api.get(
+              `/users/${id}`
+            )
+          ).data
+            .user,
     });
-  };
 
-  const fail = (
-    value: {
-      message?: string;
-    }
-  ) =>
-    setError(
-      value.message ||
-        "Unable to update account."
-    );
+  const institutions =
+    useQuery({
+      queryKey: [
+        "institutions",
+        "user-edit",
+      ],
 
-  const postAction = useMutation({
-    mutationFn: (
+      queryFn:
+        async () =>
+          (
+            await api.get(
+              "/institutions",
+              {
+                params: {
+                  limit:
+                    100,
+
+                  status:
+                    "active",
+                },
+              }
+            )
+          ).data
+            .institutions ||
+          [],
+
+      enabled:
+        actor?.role ===
+        "super_admin",
+    });
+
+  const complete =
+    (
+      text:
+        string
+    ) => {
+      setConfirm(
+        null
+      );
+
+      setMessage(
+        text
+      );
+
+      setError(
+        ""
+      );
+
+      void query.refetch();
+
+      void queryClient
+        .invalidateQueries(
+          {
+            queryKey: [
+              "users",
+            ],
+          }
+        );
+    };
+
+  const fail =
+    (
       value: {
-        path: string;
-        body?: JsonRecord;
+        message?: string;
       }
     ) =>
-      api.post(
-        value.path,
-        value.body || {}
-      ),
+      setError(
+        value.message ||
+          "Unable to update account."
+      );
 
-    onSuccess: (response) =>
-      complete(
-        response.data.message ||
-          "Account updated."
-      ),
+  const postAction =
+    useMutation({
+      mutationFn:
+        (
+          value: {
+            path:
+              string;
 
-    onError: fail,
-  });
+            body?:
+              JsonRecord;
+          }
+        ) =>
+          api.post(
+            value.path,
+            value.body ||
+              {}
+          ),
 
-  const patchAction = useMutation({
-    mutationFn: (
-      value: {
-        path: string;
-        body: JsonRecord;
-      }
-    ) =>
-      api.patch(
-        value.path,
-        value.body
-      ),
+      onSuccess:
+        (
+          response
+        ) =>
+          complete(
+            response.data
+              .message ||
+              "Account updated."
+          ),
 
-    onSuccess: () =>
-      complete(
-        "Account updated."
-      ),
+      onError:
+        fail,
+    });
 
-    onError: fail,
-  });
+  const patchAction =
+    useMutation({
+      mutationFn:
+        (
+          value: {
+            path:
+              string;
+
+            body:
+              JsonRecord;
+          }
+        ) =>
+          api.patch(
+            value.path,
+            value.body
+          ),
+
+      onSuccess:
+        () =>
+          complete(
+            "Account updated."
+          ),
+
+      onError:
+        fail,
+    });
 
   const target =
-    (query.data || {}) as JsonRecord;
+    (
+      query.data ||
+      {}
+    ) as JsonRecord;
 
   const roles =
-    actor?.role === "super_admin"
+    actor?.role ===
+    "super_admin"
       ? [
           "super_admin",
           "regulator",
@@ -2489,75 +4485,104 @@ export function UserDetail() {
           "student",
         ];
 
-  const sensitive = (
-    titleText: string,
-    path: string,
-    body?: JsonRecord
-  ) =>
-    setConfirm({
-      title: titleText,
-      path,
-      body,
-    });
+  const sensitive =
+    (
+      titleText:
+        string,
+
+      path:
+        string,
+
+      body?:
+        JsonRecord
+    ) =>
+      setConfirm(
+        {
+          title:
+            titleText,
+
+          path,
+
+          body,
+        }
+      );
 
   return (
     <div className="page">
       <div className="page-head">
         <div>
           <span className="eyebrow">
-            User administration
+            User
+            administration
           </span>
 
-          <h1>User details</h1>
+          <h1>
+            User details
+          </h1>
         </div>
 
         <Link
           className="button"
           to="/app/users"
         >
-          Back to users
+          Back to
+          users
         </Link>
       </div>
 
       <State
-        loading={query.isLoading}
-        error={query.error}
-        empty={!query.data}
+        loading={
+          query.isLoading
+        }
+        error={
+          query.error
+        }
+        empty={
+          !query.data
+        }
       >
         <div className="grid two">
           <Card title="Identity">
             <form
-              onSubmit={(event) => {
+              onSubmit={(
+                event
+              ) => {
                 event.preventDefault();
 
                 const data =
                   new FormData(
-                    event.currentTarget
+                    event
+                      .currentTarget
                   );
 
-                patchAction.mutate({
-                  path:
-                    `/users/${id}`,
+                patchAction
+                  .mutate(
+                    {
+                      path:
+                        `/users/${id}`,
 
-                  body: {
-                    fullName:
-                      data.get(
-                        "fullName"
-                      ),
+                      body: {
+                        fullName:
+                          data.get(
+                            "fullName"
+                          ),
 
-                    email:
-                      data.get(
-                        "email"
-                      ),
-                  },
-                });
+                        email:
+                          data.get(
+                            "email"
+                          ),
+                      },
+                    }
+                  );
               }}
             >
               <Field
                 name="fullName"
                 label="Full name"
                 defaultValue={String(
-                  target.fullName || ""
+                  target
+                    .fullName ||
+                    ""
                 )}
               />
 
@@ -2569,7 +4594,9 @@ export function UserDetail() {
                   name="email"
                   type="email"
                   defaultValue={String(
-                    target.email || ""
+                    target
+                      .email ||
+                      ""
                   )}
                 />
               </label>
@@ -2577,10 +4604,12 @@ export function UserDetail() {
               <Button
                 className="primary"
                 disabled={
-                  patchAction.isPending
+                  patchAction
+                    .isPending
                 }
               >
-                Save identity
+                Save
+                identity
               </Button>
             </form>
           </Card>
@@ -2588,67 +4617,89 @@ export function UserDetail() {
           <Card title="Security status">
             <dl>
               <div>
-                <dt>Role</dt>
+                <dt>
+                  Role
+                </dt>
 
                 <dd>
                   <Badge
                     value={String(
-                      target.role || ""
+                      target
+                        .role ||
+                        ""
                     )}
                   />
                 </dd>
               </div>
 
               <div>
-                <dt>Institution</dt>
+                <dt>
+                  Institution
+                </dt>
 
                 <dd>
                   {String(
-                    target.institutionName ||
-                      target.institutionId ||
+                    target
+                      .institutionName ||
+                      target
+                        .institutionId ||
                       "Global"
                   )}
                 </dd>
               </div>
 
               <div>
-                <dt>Account</dt>
+                <dt>
+                  Account
+                </dt>
 
                 <dd>
-                  {target.isActive
+                  {target
+                    .isActive
                     ? "Active"
                     : "Inactive"}
                 </dd>
               </div>
 
               <div>
-                <dt>Lock</dt>
+                <dt>
+                  Lock
+                </dt>
 
                 <dd>
-                  {target.isLocked
+                  {target
+                    .isLocked
                     ? "Locked"
                     : "Unlocked"}
                 </dd>
               </div>
 
               <div>
-                <dt>Password change</dt>
+                <dt>
+                  Password
+                  change
+                </dt>
 
                 <dd>
-                  {target.mustChangePassword
+                  {target
+                    .mustChangePassword
                     ? "Required"
                     : "Not required"}
                 </dd>
               </div>
 
               <div>
-                <dt>Last login</dt>
+                <dt>
+                  Last login
+                </dt>
 
                 <dd>
-                  {target.lastLoginAt
+                  {target
+                    .lastLoginAt
                     ? new Date(
                         String(
-                          target.lastLoginAt
+                          target
+                            .lastLoginAt
                         )
                       ).toLocaleString()
                     : "Never"}
@@ -2666,37 +4717,58 @@ export function UserDetail() {
               <select
                 aria-label="Role"
                 value={String(
-                  target.role || ""
+                  target
+                    .role ||
+                    ""
                 )}
-                onChange={(event) =>
+                onChange={(
+                  event
+                ) =>
                   sensitive(
                     "Change this user role?",
                     `/users/${id}/role`,
                     {
                       role:
-                        event.target.value,
+                        event
+                          .target
+                          .value,
                     }
                   )
                 }
               >
-                {roles.map((role) => (
-                  <option
-                    key={role}
-                    value={role}
-                  >
-                    {role.replaceAll(
-                      "_",
-                      " "
-                    )}
-                  </option>
-                ))}
+                {roles.map(
+                  (
+                    role
+                  ) => (
+                    <option
+                      key={
+                        role
+                      }
+                      value={
+                        role
+                      }
+                    >
+                      {role.replaceAll(
+                        "_",
+                        " "
+                      )}
+                    </option>
+                  )
+                )}
               </select>
             </label>
 
             {actor?.role ===
               "super_admin" &&
-              !["super_admin", "regulator"].includes(
-                String(target.role || "")
+              ![
+                "super_admin",
+                "regulator",
+              ].includes(
+                String(
+                  target
+                    .role ||
+                    ""
+                )
               ) && (
                 <label>
                   Institution
@@ -2704,16 +4776,21 @@ export function UserDetail() {
                   <select
                     aria-label="Institution"
                     value={String(
-                      target.institutionId ||
+                      target
+                        .institutionId ||
                         ""
                     )}
-                    onChange={(event) =>
+                    onChange={(
+                      event
+                    ) =>
                       sensitive(
                         "Reassign this user institution?",
                         `/users/${id}/institution`,
                         {
                           institutionId:
-                            event.target.value,
+                            event
+                              .target
+                              .value,
                         }
                       )
                     }
@@ -2722,13 +4799,17 @@ export function UserDetail() {
                       value=""
                       disabled
                     >
-                      Select institution
+                      Select
+                      institution
                     </option>
 
-                    {(institutions.data ||
-                      []).map(
+                    {(
+                      institutions.data ||
+                      []
+                    ).map(
                       (
-                        institution: JsonRecord
+                        institution:
+                          JsonRecord
                       ) => (
                         <option
                           key={String(
@@ -2751,7 +4832,8 @@ export function UserDetail() {
             <Button
               onClick={() =>
                 sensitive(
-                  target.isActive
+                  target
+                    .isActive
                     ? "Deactivate this account?"
                     : "Activate this account?",
 
@@ -2759,18 +4841,21 @@ export function UserDetail() {
 
                   {
                     isActive:
-                      !target.isActive,
+                      !target
+                        .isActive,
                   }
                 )
               }
             >
-              {target.isActive
+              {target
+                .isActive
                 ? "Deactivate"
                 : "Activate"}
             </Button>
 
             {Boolean(
-              target.isLocked
+              target
+                .isLocked
             ) && (
               <Button
                 onClick={() =>
@@ -2792,7 +4877,9 @@ export function UserDetail() {
                 )
               }
             >
-              Require password change
+              Require
+              password
+              change
             </Button>
 
             <Button
@@ -2803,7 +4890,9 @@ export function UserDetail() {
                 )
               }
             >
-              Send password reset
+              Send
+              password
+              reset
             </Button>
           </div>
 
@@ -2812,29 +4901,40 @@ export function UserDetail() {
               className="notice error"
               role="alert"
             >
-              {error}
+              {
+                error
+              }
             </div>
           )}
 
           {message && (
             <div className="notice success">
-              {message}
+              {
+                message
+              }
             </div>
           )}
         </Card>
       </State>
 
       <ConfirmDialog
-        open={Boolean(confirm)}
+        open={Boolean(
+          confirm
+        )}
         title={
-          confirm?.title ||
+          confirm
+            ?.title ||
           "Confirm action"
         }
         onCancel={() =>
-          setConfirm(null)
+          setConfirm(
+            null
+          )
         }
         onConfirm={() => {
-          if (!confirm) {
+          if (
+            !confirm
+          ) {
             return;
           }
 
@@ -2843,22 +4943,35 @@ export function UserDetail() {
               confirm.path
             )
           ) {
-            patchAction.mutate({
-              path: confirm.path,
-              body:
-                confirm.body ||
-                {},
-            });
+            patchAction
+              .mutate(
+                {
+                  path:
+                    confirm.path,
+
+                  body:
+                    confirm.body ||
+                    {},
+                }
+              );
           } else {
-            postAction.mutate(
-              confirm
-            );
+            postAction
+              .mutate(
+                confirm
+              );
           }
         }}
       >
         <p>
-          This security-sensitive action is recorded in the audit log and may
-          invalidate existing sessions.
+          This
+          security-sensitive
+          action is
+          recorded in
+          the audit log
+          and may
+          invalidate
+          existing
+          sessions.
         </p>
       </ConfirmDialog>
     </div>

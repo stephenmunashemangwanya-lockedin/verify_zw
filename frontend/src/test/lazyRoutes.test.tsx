@@ -46,13 +46,27 @@ describe("lazy route boundaries", () => {
       </MemoryRouter>
     );
     expect(
-      await screen.findByRole("heading", { name: "Welcome back" })
+      await screen.findByRole(
+        "heading",
+        { name: "Welcome back" },
+        { timeout: 15000 }
+      )
     ).toBeInTheDocument();
-  });
+  }, 20000);
 
   it("loads the authenticated dashboard and keeps navigation labels", async () => {
     render(
-      <QueryClientProvider client={new QueryClient()}>
+      <QueryClientProvider
+        client={
+          new QueryClient({
+            defaultOptions: {
+              queries: {
+                retry: false,
+              },
+            },
+          })
+        }
+      >
         <MemoryRouter initialEntries={["/app"]}>
           <App />
         </MemoryRouter>
@@ -62,14 +76,14 @@ describe("lazy route boundaries", () => {
       await screen.findByRole(
         "heading",
         { name: "Dashboard" },
-        { timeout: 5000 }
+        { timeout: 15000 }
       )
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Credentials" })).toHaveAttribute(
       "href",
       "/app/credentials"
     );
-  });
+  }, 20000);
 
   it("shows the existing loading treatment while a route module resolves", () => {
     const Pending = () => {

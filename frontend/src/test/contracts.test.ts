@@ -4,6 +4,9 @@ import apiSource from "../api/client?raw";
 import managementSource from "../pages/Management?raw";
 import styles from "../styles.css?raw";
 
+const compactApp = appSource.replace(/\s+/g, " ");
+const compactManagement = managementSource.replace(/\s+/g, " ");
+
 describe("Stage 21 route and integration contracts", () => {
   it.each([
     "/verify",
@@ -16,51 +19,91 @@ describe("Stage 21 route and integration contracts", () => {
     "/app/verifications",
     "/app/audit",
     "/app/profile",
-  ])("defines route %s", (route) =>
-    expect(appSource).toContain(
-      `path="${route.replace("/app/", "").replace("/app", "/app")}"`
-    )
-  );
-  it("uses exact credential issuance route", () =>
-    expect(managementSource).toMatch(/["']\/credentials\/issue["']/));
-  it("uses multipart FormData for issuance", () =>
-    expect(managementSource).toContain("new FormData(form)"));
- it("uses an allowed role selector instead of a raw role input", () => {
-  expect(managementSource).toMatch(
-  /<select\b(?=[^>]*\brequired\b)(?=[^>]*\bname=["']role["'])[^>]*>/
-);
+  ])("defines route %s", (route) => {
+    const path = route
+      .replace("/app/", "")
+      .replace("/app", "/app");
 
-  expect(managementSource).toMatch(
-    /const\s+roles\s*=[\s\S]*?["']issuer["'][\s\S]*?["']verifier["']/
-  );
-});
+    expect(compactApp).toContain(
+      `path="${path}"`
+    );
+  });
+
+  it("uses exact credential issuance route", () => {
+    expect(compactManagement).toMatch(
+      /["']\/credentials\/issue["']/
+    );
+  });
+
+  it("uses multipart FormData for issuance", () => {
+    expect(compactManagement).toMatch(
+      /new\s+FormData\(\s*form\s*\)/
+    );
+  });
+
+  it("uses an allowed role selector instead of a raw role input", () => {
+    expect(compactManagement).toMatch(
+      /<select\b(?=[^>]*\bname=["']role["'])(?=[^>]*\brequired\b)[^>]*>/
+    );
+
+    expect(compactManagement).not.toMatch(
+      /<input\b[^>]*\bname=["']role["'][^>]*>/
+    );
+
+    expect(compactManagement).toMatch(
+      /const\s+roles\s*=[\s\S]*?["']issuer["'][\s\S]*?["']verifier["']/
+    );
+  });
+
   it("shows institution selection only to super administrators", () => {
-    expect(managementSource).toMatch(
+    expect(compactManagement).toMatch(
       /user\?\.role\s*===\s*["']super_admin["']/
     );
-    expect(managementSource).toMatch(/<select\s+name=["']institutionId["']/);
-  });
-  it("fixes institution administrators to their backend-enforced institution", () => {
-    expect(managementSource).toContain(
-      "Institution is fixed to your institution."
-    );
-    expect(managementSource).toContain("delete body.institutionId");
-  });
- it("surfaces backend provisioning denial through a controlled error notice", () => {
-  expect(managementSource).toMatch(
-    /setError\(\s*e\.message\s*\|\|\s*["']Unable to create record\.["']\s*\)/
-  );
 
-  expect(managementSource).toContain("notice error");
-});
+    expect(compactManagement).toMatch(
+      /<select\b[^>]*\bname=["']institutionId["'][^>]*>/
+    );
+  });
+
+  it("fixes institution administrators to their backend-enforced institution", () => {
+    expect(compactManagement).toMatch(
+      /kind\s*===\s*["']users["'][\s\S]{0,250}?user\?\.role\s*===\s*["']institution_admin["']/
+    );
+
+    expect(compactManagement).toMatch(
+      /delete\s+body\s*\.\s*institutionId/
+    );
+  });
+
+  it("surfaces backend provisioning denial through a controlled error notice", () => {
+    expect(compactManagement).toMatch(
+      /setError\([\s\S]{0,150}?e\.message[\s\S]{0,150}?Unable to create record\.[\s\S]{0,100}?\)/
+    );
+
+    expect(compactManagement).toContain(
+      "notice error"
+    );
+  });
+
   it("configures safe public environment variables only", () => {
-    expect(apiSource).toContain("VITE_API_BASE_URL");
+    expect(apiSource).toContain(
+      "VITE_API_BASE_URL"
+    );
+
     expect(apiSource).not.toMatch(
       /PRIVATE_KEY|JWT_SECRET|DB_PASSWORD|PINATA_JWT/
     );
   });
-  it("provides responsive mobile breakpoints", () =>
-    expect(styles).toMatch(/@media\s*\(max-width:\s*540px\)/));
-  it("provides visible focus styling", () =>
-    expect(styles).toContain(":focus-visible"));
+
+  it("provides responsive mobile breakpoints", () => {
+    expect(styles).toMatch(
+      /@media\s*\(max-width:\s*540px\)/
+    );
+  });
+
+  it("provides visible focus styling", () => {
+    expect(styles).toContain(
+      ":focus-visible"
+    );
+  });
 });

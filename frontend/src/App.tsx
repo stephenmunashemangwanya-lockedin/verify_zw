@@ -3,6 +3,7 @@ import { lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { AccreditationsPage } from "./pages/Accreditations";
+import { RegulatorDashboard } from "./pages/RegulatorDashboard";
 
 import { useAuth } from "./context/AuthContext";
 import { LazyRouteBoundary } from "./routes/LazyRouteBoundary";
@@ -113,14 +114,8 @@ function WorkspaceHome() {
       />
     );
   }
-
   if (user?.role === "regulator") {
-    return (
-      <Navigate
-        to="/app/accreditations"
-        replace
-      />
-    );
+    return <RegulatorDashboard />;
   }
 
   return <Dashboard />;

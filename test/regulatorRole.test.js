@@ -31,12 +31,41 @@ test("accreditation routes grant regulator authority without user-admin authorit
 
 test("frontend exposes the accreditation workspace to regulator", () => {
   const app = read("frontend/src/App.tsx");
-  assert.match(read("frontend/src/types/index.ts"), /["']regulator["']/);
-  assert.match(app, /user\?\.role\s*===\s*["']regulator["']/);
-  assert.match(app, /\/app\/accreditations/);
-  const nav = read("frontend/src/layouts/AppLayout.tsx").match(/\[\s*["']\/app\/accreditations["'][\s\S]*?\],/)?.[0] || "";
+
+  assert.match(
+    read("frontend/src/types/index.ts"),
+    /["']regulator["']/
+  );
+
+  assert.match(
+    app,
+    /user\?\.role\s*===\s*["']regulator["']/
+  );
+
+  assert.match(
+    app,
+    /return\s*<RegulatorDashboard\s*\/>/
+  );
+
+  assert.match(
+    app,
+    /path=["']accreditations["']/
+  );
+
+  assert.match(
+    app,
+    /roles=\{\[\s*["']super_admin["']\s*,\s*["']regulator["']\s*\]\}/
+  );
+
+  const nav =
+    read("frontend/src/layouts/AppLayout.tsx")
+      .match(
+        /\[\s*["']\/app\/accreditations["'][\s\S]*?\],/
+      )?.[0] || "";
+
   assert.match(nav, /["']regulator["']/);
 });
+
 
 test("regulator is not exposed to institution-management navigation", () => {
   const nav = read("frontend/src/layouts/AppLayout.tsx").match(/\[\s*["']\/app\/institutions["'][\s\S]*?\],/)?.[0];
