@@ -48,7 +48,8 @@ export function LoginPage() {
               nav(
                 u.mustChangePassword
                   ? "/app/change-password"
-                  : (loc.state as { from?: string })?.from || "/app"
+                  : "/app",
+                { replace: true }
               );
             } catch (e) {
               setError((e as { message: string }).message);
@@ -91,7 +92,7 @@ export function LoginPage() {
             </div>
           )}
           <Button className="primary full" disabled={isSubmitting}>
-            {isSubmitting ? "Signing in…" : "Sign in"}
+            {isSubmitting ? "Signing inâ€¦" : "Sign in"}
           </Button>
         </form>
         <p>
@@ -169,7 +170,7 @@ export function ChangePassword() {
             <small id="change-password-confirm-error" className="field-error">{errors.confirmPassword?.message}</small>
           </label>
           <Button className="primary" disabled={isSubmitting}>
-            {isSubmitting ? "Updating…" : "Update password"}
+            {isSubmitting ? "Updatingâ€¦" : "Update password"}
           </Button>
           {error && <div className="notice error" role="alert">{error}</div>}
         </form>
@@ -214,7 +215,7 @@ export function ForgotPasswordPage() {
             </small>
           </label>
           <Button className="primary full" disabled={isSubmitting}>
-            {isSubmitting ? "Sending…" : "Send reset instructions"}
+            {isSubmitting ? "Sendingâ€¦" : "Send reset instructions"}
           </Button>
           {msg && <div className="notice success">{msg}</div>}
         </form>
@@ -310,7 +311,7 @@ export function ResetPasswordPage() {
               {show ? "Hide passwords" : "Show passwords"}
             </button>
             <Button className="primary full" disabled={isSubmitting || !token}>
-              {isSubmitting ? "Resetting…" : "Reset password"}
+              {isSubmitting ? "Resettingâ€¦" : "Reset password"}
             </Button>
             {error && (
               <div className="notice error" role="alert">
