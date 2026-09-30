@@ -1347,14 +1347,18 @@ export function CreatePage({
               data.entries()
             );
 
-          if (
-            kind ===
-              "users" &&
-            user?.role ===
-              "institution_admin"
-          ) {
-            delete body
-              .institutionId;
+          if (kind === "users") {
+            const selectedRole = String(body.role || "");
+            const institutionId = String(body.institutionId || "").trim();
+
+            if (
+              user?.role === "institution_admin" ||
+              selectedRole === "super_admin" ||
+              selectedRole === "regulator" ||
+              !institutionId
+            ) {
+              delete body.institutionId;
+            }
           }
 
           return api.post(
