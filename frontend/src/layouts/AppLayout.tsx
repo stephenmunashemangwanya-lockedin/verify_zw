@@ -325,6 +325,12 @@ export function AppLayout() {
         <main id="main">
           <Outlet />
         </main>
+
+        <footer className="workspace-footer">
+          <span>
+            &copy; 2026 <strong>VerifyZW</strong>. All rights reserved.
+          </span>
+        </footer>
       </div>
     </div>
   );

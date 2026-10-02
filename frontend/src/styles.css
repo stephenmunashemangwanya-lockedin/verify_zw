@@ -635,6 +635,9 @@ code {
 }
 .workspace {
   min-width: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 .workspace .page h1 {
   color: #fff;
@@ -669,8 +672,48 @@ code {
   font-size: 0.78rem;
 }
 .workspace main {
+  width: 100%;
   max-width: 1600px;
   margin: 0 auto;
+  flex: 1;
+}
+
+/* Improve contrast for text displayed directly on the dark workspace. */
+.workspace .page > p {
+  color: #eef8f4;
+}
+
+.workspace .page > .notice:not(.error):not(.success) {
+  color: #eef8f4;
+}
+
+/* Verification/navigation tabs displayed directly on the dark surface. */
+.workspace .page > .tabs button {
+  color: #d9ebe5;
+}
+
+.workspace .page > .tabs button:hover {
+  color: #ffffff;
+}
+
+.workspace .page > .tabs button[aria-selected="true"] {
+  color: #ffffff;
+  border-color: #e3bd4a;
+}
+
+/* Compact footer for authenticated workspace pages. */
+.workspace-footer {
+  margin-top: auto;
+  padding: 1.1rem 2rem 1.35rem;
+  text-align: center;
+  color: #d9ebe5;
+  font-size: 0.82rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.workspace-footer strong {
+  color: #ffffff;
+  font-weight: 600;
 }
 
 .stat-grid {
