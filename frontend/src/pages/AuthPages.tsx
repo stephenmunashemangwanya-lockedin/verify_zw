@@ -92,7 +92,7 @@ export function LoginPage() {
             </div>
           )}
           <Button className="primary full" disabled={isSubmitting}>
-            {isSubmitting ? "Signing inâ€¦" : "Sign in"}
+            {isSubmitting ? "Signing in…" : "Sign in"}
           </Button>
         </form>
         <p>
@@ -170,7 +170,7 @@ export function ChangePassword() {
             <small id="change-password-confirm-error" className="field-error">{errors.confirmPassword?.message}</small>
           </label>
           <Button className="primary" disabled={isSubmitting}>
-            {isSubmitting ? "Updatingâ€¦" : "Update password"}
+            {isSubmitting ? "Updating…" : "Update password"}
           </Button>
           {error && <div className="notice error" role="alert">{error}</div>}
         </form>
@@ -215,7 +215,7 @@ export function ForgotPasswordPage() {
             </small>
           </label>
           <Button className="primary full" disabled={isSubmitting}>
-            {isSubmitting ? "Sendingâ€¦" : "Send reset instructions"}
+            {isSubmitting ? "Sending…" : "Send reset instructions"}
           </Button>
           {msg && <div className="notice success">{msg}</div>}
         </form>
@@ -311,7 +311,7 @@ export function ResetPasswordPage() {
               {show ? "Hide passwords" : "Show passwords"}
             </button>
             <Button className="primary full" disabled={isSubmitting || !token}>
-              {isSubmitting ? "Resettingâ€¦" : "Reset password"}
+              {isSubmitting ? "Resetting…" : "Reset password"}
             </Button>
             {error && (
               <div className="notice error" role="alert">
