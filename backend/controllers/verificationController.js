@@ -1,3 +1,8 @@
+const { analyseTamperedPdf } = require("../services/tamperAnalysisService");
+
+const {
+  resolveCredentialFromPdf,
+} = require("../services/pdfCredentialResolutionService");
 const fs = require("fs");
 
 const {
@@ -9,6 +14,7 @@ const {
   findCredentialByIdForVerification,
   findCredentialByPublicToken,
   createVerificationLog,
+  findCredentialsByStudentNumberForVerification,
 } = require("../models/verificationModel");
 
 const {
@@ -207,6 +213,228 @@ const verifyFile = async (req, res) => {
       await findCredentialByHashForVerification(
         hash
       );
+
+    if (!credential) {
+      const resolution =
+        await resolveCredentialFromPdf({
+          filePath:
+            req.file.path,
+
+          findById:
+            findCredentialByIdForVerification,
+
+          findByPublicToken:
+            findCredentialByPublicToken,
+
+          findByStudentNumber:
+            findCredentialsByStudentNumberForVerification,
+        });
+
+      if (
+        resolution
+          .credential
+      ) {
+        const resolvedCredential =
+          resolution
+            .credential;
+
+        const officialHash =
+          String(
+            resolvedCredential
+              .certificate_hash ||
+              ""
+          ).toLowerCase();
+
+        /*
+         * A different uploaded hash plus a
+         * safely resolved official credential
+         * is tampering, not UNKNOWN.
+         */
+        if (
+          officialHash &&
+          hash !==
+            officialHash
+        ) {
+          const officialState =
+            await verifyCredentialState({
+              credential:
+                resolvedCredential,
+
+              certificateHash:
+                officialHash,
+            });
+
+          const tamperAnalysis =
+            await analyseTamperedPdf({
+              filePath:
+                req.file.path,
+
+              credential:
+                resolvedCredential,
+            });
+
+          await logOutcome(
+            req,
+            "file",
+            hash,
+            resolvedCredential,
+            "TAMPERED"
+          );
+
+          return res
+            .status(200)
+            .json({
+              success: true,
+
+              message:
+                "The uploaded certificate was identified but does not match the authoritative credential.",
+
+              data: {
+                ...officialState,
+
+                result:
+                  "TAMPERED",
+
+                integrity: {
+                  matchesOfficialHash:
+                    false,
+                },
+
+                credentialResolution: {
+                  method:
+                    resolution
+                      .resolutionMethod,
+
+                  confidence:
+                    resolution
+                      .confidence,
+
+                  evidence:
+                    resolution
+                      .evidence,
+                },
+
+                tamperAnalysis,
+
+                verificationTime:
+                  new Date()
+                    .toISOString(),
+              },
+            });
+        }
+      }
+    }
+
+    if (!credential) {
+      const resolution =
+        await resolveCredentialFromPdf({
+          filePath:
+            req.file.path,
+
+          findById:
+            findCredentialByIdForVerification,
+
+          findByPublicToken:
+            findCredentialByPublicToken,
+
+          findByStudentNumber:
+            findCredentialsByStudentNumberForVerification,
+        });
+
+      if (
+        resolution
+          .credential
+      ) {
+        const resolvedCredential =
+          resolution
+            .credential;
+
+        const officialHash =
+          String(
+            resolvedCredential
+              .certificate_hash ||
+              ""
+          ).toLowerCase();
+
+        /*
+         * A different uploaded hash plus a
+         * safely resolved official credential
+         * is tampering, not UNKNOWN.
+         */
+        if (
+          officialHash &&
+          hash !==
+            officialHash
+        ) {
+          const officialState =
+            await verifyCredentialState({
+              credential:
+                resolvedCredential,
+
+              certificateHash:
+                officialHash,
+            });
+
+          const tamperAnalysis =
+            await analyseTamperedPdf({
+              filePath:
+                req.file.path,
+
+              credential:
+                resolvedCredential,
+            });
+
+          await logOutcome(
+            req,
+            "file",
+            hash,
+            resolvedCredential,
+            "TAMPERED"
+          );
+
+          return res
+            .status(200)
+            .json({
+              success: true,
+
+              message:
+                "The uploaded certificate was identified but does not match the authoritative credential.",
+
+              data: {
+                ...officialState,
+
+                result:
+                  "TAMPERED",
+
+                integrity: {
+                  matchesOfficialHash:
+                    false,
+                },
+
+                credentialResolution: {
+                  method:
+                    resolution
+                      .resolutionMethod,
+
+                  confidence:
+                    resolution
+                      .confidence,
+
+                  evidence:
+                    resolution
+                      .evidence,
+                },
+
+                tamperAnalysis,
+
+                verificationTime:
+                  new Date()
+                    .toISOString(),
+              },
+            });
+        }
+      }
+    }
 
     const verification =
       await verifyKnownHash(
@@ -477,6 +705,13 @@ const verifyClaimedFile =
               officialHash,
           });
 
+        const tamperAnalysis =
+          await analyseTamperedPdf({
+            filePath:
+              req.file.path,
+            credential,
+          });
+
         await logOutcome(
           req,
           method,
@@ -500,6 +735,8 @@ const verifyClaimedFile =
               matchesOfficialHash:
                 false,
             },
+
+            tamperAnalysis,
 
             verificationTime:
               new Date().toISOString(),

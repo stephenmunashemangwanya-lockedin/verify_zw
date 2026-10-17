@@ -820,6 +820,70 @@ export function VerificationResult({
       ? "Does not match official certificate"
       : null;
 
+  const tamperAnalysis =
+    data.tamperAnalysis &&
+    typeof data.tamperAnalysis ===
+      "object"
+      ? (data.tamperAnalysis as Record<
+          string,
+          unknown
+        >)
+      : null;
+
+  const rawAlteredFields =
+    tamperAnalysis?.alteredFields;
+
+  const alteredFields =
+    Array.isArray(
+      rawAlteredFields
+    )
+      ? rawAlteredFields.filter(
+          (
+            field
+          ): field is Record<
+            string,
+            unknown
+          > =>
+            Boolean(field) &&
+            typeof field ===
+              "object"
+        )
+      : [];
+
+  const structuralAnalysis =
+    tamperAnalysis
+      ?.structuralAnalysis &&
+    typeof tamperAnalysis
+      .structuralAnalysis ===
+      "object"
+      ? (tamperAnalysis
+          .structuralAnalysis as Record<
+          string,
+          unknown
+        >)
+      : null;
+
+  const rawStructuralChanges =
+    structuralAnalysis
+      ?.changes;
+
+  const structuralChanges =
+    Array.isArray(
+      rawStructuralChanges
+    )
+      ? rawStructuralChanges.filter(
+          (
+            change
+          ): change is Record<
+            string,
+            unknown
+          > =>
+            Boolean(change) &&
+            typeof change ===
+              "object"
+        )
+      : [];
+
   const heading =
     outcome ===
     "VERIFIED"
@@ -862,11 +926,167 @@ export function VerificationResult({
           className="notice error"
           role="alert"
         >
-          The uploaded PDF does not
-          match the certificate stored
-          for this credential. Do not
-          treat the uploaded document as
-          authentic.
+          <p>
+            <strong>
+              Certificate tampering
+              detected.
+            </strong>{" "}
+            The uploaded PDF does
+            not match the
+            authoritative certificate
+            stored for this
+            credential.
+          </p>
+
+          {alteredFields.length >
+          0 ? (
+            <>
+              <p>
+                <strong>
+                  Detected
+                  alterations:
+                </strong>
+              </p>
+
+              <ul
+                aria-label="Detected alterations"
+              >
+                {alteredFields.map(
+                  (
+                    field,
+                    index
+                  ) => {
+                    const label =
+                      typeof field
+                        .label ===
+                        "string" &&
+                      field.label
+                        ? field
+                            .label
+                        : typeof field
+                              .field ===
+                            "string"
+                          ? field
+                              .field
+                              .replaceAll(
+                                "_",
+                                " "
+                              )
+                          : "Credential field";
+
+                    const key =
+                      typeof field
+                        .field ===
+                      "string"
+                        ? field
+                            .field
+                        : `field-${index}`;
+
+                    return (
+                      <li
+                        key={
+                          key
+                        }
+                      >
+                        <strong>
+                          {
+                            label
+                          }
+                        </strong>
+                        : ALTERED
+                      </li>
+                    );
+                  }
+                )}
+              </ul>
+            </>
+          ) : tamperAnalysis
+              ?.analysisAvailable ===
+            false ? (
+            <p>
+              {typeof tamperAnalysis
+                .analysisError ===
+              "string"
+                ? tamperAnalysis
+                    .analysisError
+                : "Document modification was detected, but field-level localisation was unavailable."}
+            </p>
+          ) : (
+            <p>
+              Document-level
+              modification was
+              detected, but no
+              semantic credential
+              field alteration could
+              be localised.
+            </p>
+          )}
+
+          {structuralChanges.length >
+          0 && (
+            <>
+              <p>
+                <strong>
+                  Document structure
+                  / metadata changes:
+                </strong>
+              </p>
+
+              <ul
+                aria-label="Document structure changes"
+              >
+                {structuralChanges.map(
+                  (
+                    change,
+                    index
+                  ) => {
+                    const label =
+                      typeof change
+                        .label ===
+                        "string"
+                        ? change
+                            .label
+                        : "Document structure changed";
+
+                    const count =
+                      typeof change
+                        .count ===
+                        "number"
+                        ? change
+                            .count
+                        : null;
+
+                    return (
+                      <li
+                        key={
+                          typeof change
+                            .type ===
+                          "string"
+                            ? change
+                                .type
+                            : `structure-${index}`
+                        }
+                      >
+                        <strong>
+                          {label}
+                        </strong>
+                        {count !==
+                          null
+                          ? ` (${count})`
+                          : ""}
+                      </li>
+                    );
+                  }
+                )}
+              </ul>
+            </>
+          )}
+
+          <p>
+            Do not treat the
+            uploaded document as
+            authentic.
+          </p>
         </div>
       )}
 

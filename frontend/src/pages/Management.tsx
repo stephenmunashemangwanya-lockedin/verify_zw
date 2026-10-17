@@ -3712,9 +3712,8 @@ export function CredentialDetail() {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                View IPFS
-                evidence
-              </a>
+                IPFS evidence
+                              </a>
             )}
 
             {Boolean(

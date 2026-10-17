@@ -329,7 +329,73 @@ const listVerificationLogs =
     };
   };
 
+
+const findCredentialsByStudentNumberForVerification =
+  async (studentNumber) => {
+    const value =
+      String(
+        studentNumber || ""
+      ).trim();
+
+    if (!value) {
+      return [];
+    }
+
+    const result =
+      await pool.query(
+        `
+        SELECT
+          credentials.*,
+
+          students.student_number,
+          students.full_name
+            AS student_name,
+          students.programme,
+
+          institutions.name
+            AS institution_name,
+          institutions.wallet_address
+            AS institution_wallet
+
+        FROM credentials
+
+        INNER JOIN students
+          ON students.id =
+             credentials.student_id
+
+        INNER JOIN institutions
+          ON institutions.id =
+             credentials.institution_id
+
+        WHERE LOWER(
+          students.student_number
+        ) = LOWER($1)
+
+        ORDER BY
+          CASE
+            WHEN credentials.status =
+              'active'
+              THEN 0
+            WHEN credentials.status =
+              'superseded'
+              THEN 1
+            WHEN credentials.status =
+              'revoked'
+              THEN 2
+            ELSE 3
+          END,
+          credentials.created_at DESC
+
+        LIMIT 20
+        `,
+        [value]
+      );
+
+    return result.rows;
+  };
+
 module.exports = {
+  findCredentialsByStudentNumberForVerification,
   findCredentialByHashForVerification,
   findCredentialByIdForVerification,
   findCredentialByPublicToken,

@@ -106,6 +106,7 @@
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.11.0",
     "multer": "^2.2.0",
+    "pdfjs-dist": "^6.4.299",
     "pdfkit": "^0.17.2",
     "pg": "^8.22.0",
     "prom-client": "^15.1.3",

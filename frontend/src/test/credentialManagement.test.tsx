@@ -249,11 +249,6 @@ describe(
           },
         ];
 
-      vi.stubEnv(
-        "VITE_IPFS_GATEWAY",
-        "https://ipfs.example.test/ipfs"
-      );
-
       vi.mocked(
         api.get
       ).mockImplementation(
@@ -389,15 +384,6 @@ describe(
     });
 
     it("renders human-readable detail and safe evidence links", async () => {
-    vi.stubEnv(
-      "VITE_IPFS_GATEWAY",
-      "https://ipfs.example.test/ipfs"
-    );
-
-    vi.stubEnv(
-      "VITE_BLOCK_EXPLORER_URL",
-      "https://explorer.example.test"
-    );
         render(
           wrapper(
             <CredentialDetail />
@@ -416,15 +402,24 @@ describe(
           )
         ).toBeInTheDocument();
 
-        expect(
-          screen.getByRole(
-            "link",
-            {
-              name:
-                /IPFS evidence/i,
-            }
-          )
-        ).toHaveAttribute(
+        const ipfsLink = screen.getByRole("link", { name: /IPFS evidence/i });
+        expect(ipfsLink).toHaveAttribute(
+          "href",
+          "https://ipfs.example.test/ipfs/QmSafe"
+        );
+        expect(ipfsLink).toHaveAttribute("target", "_blank");
+        expect(ipfsLink).toHaveAttribute(
+          "rel",
+          "noopener noreferrer"
+        );
+
+        const transactionLink = screen.getByRole("link", { name: /View transaction/i });
+        expect(transactionLink).toHaveAttribute(
+          "href",
+          "https://explorer.example.test/tx/0xsafe"
+        );
+        expect(transactionLink).toHaveAttribute("target", "_blank");
+        expect(transactionLink).toHaveAttribute(
           "rel",
           "noopener noreferrer"
         );

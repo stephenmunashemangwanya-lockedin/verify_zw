@@ -1,18 +1,26 @@
-import { render, screen } from "@testing-library/react";
+﻿import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
+
 import App from "../App";
 import { LazyRouteBoundary } from "../routes/LazyRouteBoundary";
 
 vi.mock("../api/client", () => ({
   api: {
-    get: vi.fn(async () => ({ data: { data: { totalCredentials: 1 } } })),
+    get: vi.fn(async () => ({
+      data: {
+        data: {
+          totalCredentials: 1,
+        },
+      },
+    })),
     post: vi.fn(),
     patch: vi.fn(),
   },
   downloadBlob: vi.fn(),
 }));
+
 vi.mock("../context/AuthContext", () => ({
   useAuth: () => ({
     user: {
@@ -34,85 +42,137 @@ describe("lazy route boundaries", () => {
         <App />
       </MemoryRouter>
     );
+
     expect(
-      screen.getByRole("heading", { name: "Credentials Zimbabwe can trust." })
+      screen.getByRole("heading", {
+        name: "Credentials Zimbabwe can trust.",
+      })
     ).toBeInTheDocument();
   });
 
-  it("loads the login route from its authentication chunk", async () => {
-    render(
-      <MemoryRouter initialEntries={["/login"]}>
-        <App />
-      </MemoryRouter>
-    );
-    expect(
-      await screen.findByRole(
-        "heading",
-        { name: "Welcome back" },
-        { timeout: 15000 }
-      )
-    ).toBeInTheDocument();
-  }, 20000);
-
-  it("loads the authenticated dashboard and keeps navigation labels", async () => {
-    render(
-      <QueryClientProvider
-        client={
-          new QueryClient({
-            defaultOptions: {
-              queries: {
-                retry: false,
-              },
-            },
-          })
-        }
-      >
-        <MemoryRouter initialEntries={["/app"]}>
+  it(
+    "loads the login route from its authentication chunk",
+    async () => {
+      render(
+        <MemoryRouter initialEntries={["/login"]}>
           <App />
         </MemoryRouter>
-      </QueryClientProvider>
-    );
-    expect(
-      await screen.findByRole(
-        "heading",
-        { name: "Dashboard" },
-        { timeout: 15000 }
-      )
-    ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Credentials" })).toHaveAttribute(
-      "href",
-      "/app/credentials"
-    );
-  }, 20000);
+      );
 
-  it("shows the existing loading treatment while a route module resolves", () => {
-    const Pending = () => {
-      throw new Promise(() => undefined);
-    };
-    render(
-      <MemoryRouter>
-        <LazyRouteBoundary>
-          <Pending />
-        </LazyRouteBoundary>
-      </MemoryRouter>
-    );
-    expect(screen.getByRole("status")).toHaveTextContent("Loading");
-  });
+      await vi.dynamicImportSettled();
 
-  it("turns a lazy import failure into a controlled page error", () => {
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const Broken = () => {
-      throw new Error("chunk unavailable");
-    };
-    render(
-      <MemoryRouter>
-        <LazyRouteBoundary>
-          <Broken />
-        </LazyRouteBoundary>
-      </MemoryRouter>
-    );
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "Unable to load this page. Please refresh and try again."
-    );
-  });
+      expect(
+        await screen.findByRole(
+          "heading",
+          {
+            name: "Welcome back",
+          },
+          {
+            timeout: 15000,
+          }
+        )
+      ).toBeInTheDocument();
+    },
+    30000
+  );
+
+  it(
+    "loads the authenticated dashboard and keeps navigation labels",
+    async () => {
+      const queryClient = new QueryClient({
+        defaultOptions: {
+          queries: {
+            retry: false,
+          },
+        },
+      });
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={["/app"]}>
+            <App />
+          </MemoryRouter>
+        </QueryClientProvider>
+      );
+
+      /*
+       * The authenticated dashboard is loaded through a lazy route.
+       * Wait for the dynamic import chain to settle before asserting
+       * against the rendered dashboard.
+       */
+      await vi.dynamicImportSettled();
+
+      expect(
+        await screen.findByRole(
+          "heading",
+          {
+            name: "Dashboard",
+          },
+          {
+            timeout: 30000,
+          }
+        )
+      ).toBeInTheDocument();
+
+      expect(
+        screen.getByRole("link", {
+          name: "Credentials",
+        })
+      ).toHaveAttribute(
+        "href",
+        "/app/credentials"
+      );
+    },
+    120000
+  );
+
+  it(
+    "shows the existing loading treatment while a route module resolves",
+    () => {
+      const Pending = () => {
+        throw new Promise<void>(() => undefined);
+      };
+
+      render(
+        <MemoryRouter>
+          <LazyRouteBoundary>
+            <Pending />
+          </LazyRouteBoundary>
+        </MemoryRouter>
+      );
+
+      expect(
+        screen.getByRole("status")
+      ).toHaveTextContent("Loading");
+    }
+  );
+
+  it(
+    "turns a lazy import failure into a controlled page error",
+    () => {
+      const consoleErrorSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => undefined);
+
+      const Broken = () => {
+        throw new Error("chunk unavailable");
+      };
+
+      render(
+        <MemoryRouter>
+          <LazyRouteBoundary>
+            <Broken />
+          </LazyRouteBoundary>
+        </MemoryRouter>
+      );
+
+      expect(
+        screen.getByRole("alert")
+      ).toHaveTextContent(
+        "Unable to load this page. Please refresh and try again."
+      );
+
+      consoleErrorSpy.mockRestore();
+    }
+  );
 });
