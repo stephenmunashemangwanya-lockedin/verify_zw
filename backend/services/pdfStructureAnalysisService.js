@@ -771,7 +771,8 @@ async function analysePdfStructureAgainstOfficial({
 }
 
 module.exports = {
-  analysePdfStructureAgainstOfficial,
+    fetchOfficialPdf,
+analysePdfStructureAgainstOfficial,
   extractStructure,
   compareStructures,
 };
