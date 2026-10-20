@@ -232,13 +232,9 @@ async function extractPdfTextFromBytes(
 
   const loadingTask =
     pdfjs.getDocument({
-      data:
-        bytes instanceof
-        Uint8Array
-          ? bytes
-          : new Uint8Array(
-              bytes
-            ),
+      // PDF.js rejects Node Buffers, although Buffer extends Uint8Array.
+      // Copy into a plain Uint8Array without changing the source bytes.
+      data: new Uint8Array(bytes),
 
       disableWorker: true,
     });

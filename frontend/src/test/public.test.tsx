@@ -39,6 +39,7 @@ describe("public experience", () => {
       expect(api.get).toHaveBeenCalledWith(`/verify/hash/${"a".repeat(64)}`)
     );
     expect(await screen.findByText("Credential verified")).toBeInTheDocument();
+    expect(screen.getByText(/No PDF was submitted/)).toBeInTheDocument();
   });
   it("verifies by credential ID", async () => {
     vi.mocked(api.get).mockResolvedValue({
@@ -86,6 +87,7 @@ describe("public experience", () => {
       expect(api.get).toHaveBeenCalledWith("/verify/token/public-token")
     );
     expect(await screen.findByText("Credential revoked")).toBeInTheDocument();
+    expect(screen.getByText(/Document integrity was not assessed/)).toBeInTheDocument();
   });
   it("uploads PDF as multipart form data", async () => {
     vi.mocked(api.post).mockResolvedValue({
@@ -114,6 +116,8 @@ describe("public experience", () => {
         expect.any(FormData)
       )
     );
+    expect(await screen.findByText("Credential verified")).toBeInTheDocument();
+    expect(screen.queryByText(/No PDF was submitted/)).not.toBeInTheDocument();
   });
   it("rejects unsafe uploads before API submission", async () => {
     render(

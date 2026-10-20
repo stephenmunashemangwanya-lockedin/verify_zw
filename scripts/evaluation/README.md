@@ -92,12 +92,24 @@ remain in timing/pair statistics and count toward error rate; paired rows expose
 bothCorrect. Exception messages and proofs are never exported. If an exception
 prevents the evaluator returning its chain timing, full-mode chainRpcMs is null.
 
-## Formal configuration only
+## Formal evaluation
 
 `config.js` defines full/no-anchor, concurrency [1,5,10,20,50], three runs,
 100 warmups and 1,000 measured requests per mode/concurrency/run: exactly 3,000
 warmups and 30,000 measured observations. Calculated totals are asserted.
-There is no formal executor in this stage. Any formal CLI request, including
-`--allow-formal`, is refused. A later reviewed executor and explicit approval
-after research freeze are required before conducting formal evaluation.
-No availability/reliability experiments or recovery actions run here.
+The formal executor is `runVerificationFormal.js`. Run its `--preflight` first;
+after a successful preflight, `--execute-formal` runs the frozen design. The
+smoke executor still rejects formal profiles; use the separate formal executor.
+Formal output comprises `formal-metadata.json`, `formal-observations.json`,
+`formal-paired-deltas.json`, and `formal-summary.json` in `test-results/research`.
+The CLI replaces those filenames: preserve previous evidence before rerunning,
+or invoke the executor with an isolated output destination. Store research
+evidence under `test-results`, outside Hardhat's managed `artifacts` directory:
+Hardhat compilation removes JSON files that are not recognised contract artifacts.
+
+This is a controlled conventional digital verification comparator using an
+**in-process deterministic evaluation stub**. It measures neither public-chain
+latency nor consensus overhead. Only ordinary active credentials are timed;
+tampering, lifecycle and accreditation correctness require separate experiments.
+Repeated requests and shared-host execution limit inferential claims. No live
+availability experiments, database mutations or recovery actions run here.

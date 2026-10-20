@@ -313,6 +313,8 @@ export function VerifyPage() {
     Record<string, unknown> | null
   >(null);
 
+  const [documentSubmitted, setDocumentSubmitted] = useState(false);
+
   const [
     error,
     setError,
@@ -419,6 +421,10 @@ export function VerifyPage() {
             );
         }
 
+        setDocumentSubmitted(
+          mode === "file" ||
+          ((mode === "credential" || mode === "token") && Boolean(file))
+        );
         setResult(
           response.data.data
         );
@@ -707,11 +713,19 @@ export function VerifyPage() {
         }
       >
         {result && (
+          <>
+          {!documentSubmitted && (
+            <p className="notice">
+              No PDF was submitted. Document integrity was not assessed.
+              This lookup reports the registered credential and its current status.
+            </p>
+          )}
           <VerificationResult
             data={
               result
             }
           />
+          </>
         )}
       </State>
     </div>
