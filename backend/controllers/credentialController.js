@@ -2,6 +2,7 @@ const fs = require("fs");
 
 const {
   createProcessingCredential,
+  setCredentialSemanticManifest,
   setCredentialStructuredProof,
   updateCredentialIpfsData,
   markCredentialFailed,
@@ -57,6 +58,10 @@ const {
 const {
   generatePresentationCertificate,
 } = require("../services/certificatePdfService");
+
+const {
+  buildSemanticManifestFromFile,
+} = require("../services/semanticManifestService");
 
 const removeTemporaryFile =
   async (filePath) => {
@@ -171,6 +176,8 @@ const safeProcessingError =
         "CREDENTIAL_SIGNER_REQUIRED",
         "CREDENTIAL_SIGNER_MISMATCH",
         "CREDENTIAL_PROOF_PERSISTENCE_FAILED",
+        "SEMANTIC_MANIFEST_INVALID",
+        "SEMANTIC_MANIFEST_PERSISTENCE_FAILED",
       ]);
 
     return allowedCodes.has(
@@ -416,6 +423,64 @@ const issueCredential =
         await createProcessingCredential(
           processingInput
         );
+
+      const semanticManifest =
+        await buildSemanticManifestFromFile({
+          filePath:
+            req.file.path,
+
+          sourceHash:
+            certificateHash,
+
+          fields: {
+            student_name:
+              student.full_name,
+
+            student_number:
+              student.student_number,
+
+            institution_name:
+              institution.name,
+
+            programme:
+              student.programme,
+
+            qualification,
+
+            classification:
+              null,
+
+            issue_date:
+              issueDate,
+          },
+        });
+
+      const storedSemanticManifest =
+        await setCredentialSemanticManifest(
+          credential.id,
+          {
+            manifest:
+              semanticManifest,
+
+            version:
+              semanticManifest.version,
+
+            sourceHash:
+              certificateHash,
+          }
+        );
+
+      if (!storedSemanticManifest) {
+        const error =
+          new Error(
+            "Semantic manifest could not be persisted for the processing credential."
+          );
+
+        error.code =
+          "SEMANTIC_MANIFEST_PERSISTENCE_FAILED";
+
+        throw error;
+      }
 
       await createAuditLog({
         ...requestAuditContext(

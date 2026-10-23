@@ -50,6 +50,7 @@ const approvedMigrations = [
   "010_structured_credential_proof.sql",
    "011_signed_status_lists.sql",
   "012_regulator_role.sql",
+  "013_semantic_credential_manifest.sql",
 ];
 
 test(

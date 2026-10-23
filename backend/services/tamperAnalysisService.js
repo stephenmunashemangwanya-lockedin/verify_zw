@@ -1,4 +1,10 @@
 const {
+  validateManifest,
+  buildSemanticManifestFromBytes,
+  verifySemanticManifestFromFile,
+} = require("./semanticManifestService");
+
+const {
   analyseAnchoredSemanticChanges,
 } = require("./pdfSemanticAnchorService");
 
@@ -1087,44 +1093,211 @@ function mergeSemanticResults(
   };
 }
 
+const normaliseManifestHash = value =>
+  String(value || "")
+    .trim()
+    .toLowerCase();
+
+const resolvePersistedSemanticManifest =
+  credential => {
+    const hasAnyManifestData =
+      credential?.semantic_manifest !== null &&
+        credential?.semantic_manifest !== undefined ||
+      credential?.semantic_manifest_version !== null &&
+        credential?.semantic_manifest_version !== undefined ||
+      credential?.semantic_manifest_source_hash !== null &&
+        credential?.semantic_manifest_source_hash !== undefined;
+
+    if (!hasAnyManifestData) {
+      return {
+        present: false,
+        valid: false,
+        reason: "SEMANTIC_MANIFEST_NOT_PRESENT",
+      };
+    }
+
+    let manifest =
+      credential.semantic_manifest;
+
+    if (
+      typeof manifest === "string"
+    ) {
+      try {
+        manifest =
+          JSON.parse(manifest);
+      } catch {
+        return {
+          present: true,
+          valid: false,
+          reason: "SEMANTIC_MANIFEST_INVALID",
+        };
+      }
+    }
+
+    if (
+      !validateManifest(manifest)
+    ) {
+      return {
+        present: true,
+        valid: false,
+        reason: "SEMANTIC_MANIFEST_INVALID",
+      };
+    }
+
+    const version =
+      Number(
+        credential.semantic_manifest_version
+      );
+
+    if (
+      !Number.isInteger(version) ||
+      version !== manifest.version
+    ) {
+      return {
+        present: true,
+        valid: false,
+        reason: "SEMANTIC_MANIFEST_VERSION_MISMATCH",
+      };
+    }
+
+    const certificateHash =
+      normaliseManifestHash(
+        credential.certificate_hash
+      );
+
+    const storedSourceHash =
+      normaliseManifestHash(
+        credential.semantic_manifest_source_hash
+      );
+
+    const manifestSourceHash =
+      normaliseManifestHash(
+        manifest.sourceSha256
+      );
+
+    if (
+      !/^[a-f0-9]{64}$/.test(certificateHash) ||
+      storedSourceHash !== certificateHash ||
+      manifestSourceHash !== certificateHash
+    ) {
+      return {
+        present: true,
+        valid: false,
+        reason: "SEMANTIC_MANIFEST_SOURCE_HASH_MISMATCH",
+      };
+    }
+
+    return {
+      present: true,
+      valid: true,
+      reason: null,
+      manifest,
+    };
+  };
+
 async function analyseTamperedPdf({
   filePath,
   credential,
 }) {
   try {
-    const submittedText =
-      await extractPdfText(
-        filePath
-      );
-
-    const baseline =
-      await loadOfficialBaseline(
+    const persistedManifest =
+      resolvePersistedSemanticManifest(
         credential
       );
 
-    const semantic =
-      analyseSemanticChanges({
-        credential,
-        submittedText,
+    let resolvedSemantic;
+    let baselineAnalysis;
+    let semanticSource;
 
-        baselineText:
-          baseline.available
-            ? baseline.text
-            : null,
-      });
+    if (persistedManifest.present) {
+      if (persistedManifest.valid) {
+        resolvedSemantic =
+          await verifySemanticManifestFromFile({
+            manifest:
+              persistedManifest.manifest,
+            filePath,
+          });
 
-    const anchoredSemantic =
-      await analyseAnchoredSemanticChanges({
-        credential,
-        filePath,
-      });
+        baselineAnalysis = {
+          available: true,
+          reason: "SEMANTIC_MANIFEST",
+        };
 
-    const resolvedSemantic =
-      mergeSemanticResults(
-        semantic,
-        anchoredSemantic
-      );
+        semanticSource =
+          "PERSISTED_MANIFEST";
+      } else {
+        /*
+         * A manifest exists but failed integrity validation.
+         * Fail closed. Never silently downgrade to heuristics.
+         */
+        resolvedSemantic = {
+          analysisAvailable: false,
+          reason:
+            persistedManifest.reason,
+          semanticTamperingDetected: null,
+          alteredFields: [],
+          fields: [],
+        };
 
+        baselineAnalysis = {
+          available: false,
+          reason:
+            persistedManifest.reason,
+        };
+
+        semanticSource =
+          "PERSISTED_MANIFEST_INVALID";
+      }
+            } else {
+      /*
+       * Legacy credential without a persisted manifest.
+       *
+       * Preserve the proven conservative baseline-aware
+       * analyser. Existing credentials should receive
+       * manifests through the explicit backfill process;
+       * runtime verification must not create or guess
+       * permanent semantic ownership.
+       */
+      const submittedText =
+        await extractPdfText(
+          filePath
+        );
+
+      const baseline =
+        await loadOfficialBaseline(
+          credential
+        );
+
+      resolvedSemantic =
+        analyseSemanticChanges({
+          credential,
+
+          submittedText,
+
+          baselineText:
+            baseline.available
+              ? baseline.text
+              : null,
+        });
+
+      baselineAnalysis = {
+        available:
+          Boolean(
+            baseline.available
+          ),
+
+        reason:
+          baseline.reason ||
+          (baseline.available
+            ? null
+            : "AUTHORITATIVE_PDF_UNAVAILABLE"),
+      };
+
+      semanticSource =
+        baseline.available
+          ? "LEGACY_BASELINE"
+          : "LEGACY_NO_BASELINE";
+    }
     const structuralAnalysis =
       await analysePdfStructureAgainstOfficial({
         filePath,
@@ -1136,22 +1309,27 @@ async function analyseTamperedPdf({
 
       documentModified: true,
 
-      baselineAnalysis: {
+      baselineAnalysis,
+
+      semanticAnalysis: {
+        source:
+          semanticSource,
+
         available:
-          baseline.available,
+          resolvedSemantic.analysisAvailable !== false,
 
         reason:
-          baseline.reason,
+          resolvedSemantic.reason || null,
       },
 
       semanticTamperingDetected:
         resolvedSemantic.semanticTamperingDetected,
 
       alteredFields:
-        resolvedSemantic.alteredFields,
+        resolvedSemantic.alteredFields || [],
 
       fields:
-        resolvedSemantic.fields,
+        resolvedSemantic.fields || [],
 
       structuralAnalysis,
     };
@@ -1161,25 +1339,18 @@ async function analyseTamperedPdf({
 
       documentModified: true,
 
-      semanticTamperingDetected:
-        null,
+      semanticTamperingDetected: null,
 
       alteredFields: [],
 
       fields: [],
 
       structuralAnalysis: {
-        analysisAvailable:
-          false,
-
+        analysisAvailable: false,
         reason:
           "STRUCTURAL_ANALYSIS_UNAVAILABLE",
-
-        structureModified:
-          null,
-
+        structureModified: null,
         changes: [],
-
         metadataChanges: [],
       },
 
@@ -1190,6 +1361,7 @@ async function analyseTamperedPdf({
 }
 
 module.exports = {
+  resolvePersistedSemanticManifest,
   analyseTamperedPdf,
   analyseSemanticChanges,
   extractPdfText,

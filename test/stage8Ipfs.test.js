@@ -163,6 +163,7 @@ const loadControllerWithMocks = (overrides = {}) => {
     ipfs: require.resolve("../backend/services/ipfsService"),
     audit: require.resolve("../backend/models/auditModel"),
     blockchain: require.resolve("../backend/services/blockchainService"),
+    semanticManifest: require.resolve("../backend/services/semanticManifestService"),
     controller: require.resolve("../backend/controllers/credentialController"),
   };
   const state = { failed: null, audits: [], ipfsCid: null };
@@ -170,6 +171,13 @@ const loadControllerWithMocks = (overrides = {}) => {
     credential: {
       createCredential: async () => ({}),
       createProcessingCredential: async (data) => ({ id: "credential-id", ...data, status: "processing" }),
+      setCredentialSemanticManifest: async (id, data) => ({
+        id,
+        semantic_manifest: data.manifest,
+        semantic_manifest_version: data.version,
+        semantic_manifest_source_hash: data.sourceHash,
+        status: "processing",
+      }),
       updateCredentialIpfsData: async (id, cid) => {
         state.ipfsCid = cid;
         return { id, ipfs_cid: cid, status: "pending" };
@@ -182,8 +190,8 @@ const loadControllerWithMocks = (overrides = {}) => {
       findCredentialByHash: async () => null,
       ...overrides.credential,
     },
-    student: { getStudentById: async () => ({ id: "student-id", institution_id: "institution-id", student_number: "ST-1" }), ...overrides.student },
-    institution: { getInstitutionById: async () => ({ id: "institution-id", status: true }), ...overrides.institution },
+    student: { getStudentById: async () => ({ id: "student-id", institution_id: "institution-id", student_number: "ST-1", full_name: "Test Student", programme: "Computer Systems Engineering" }), ...overrides.student },
+    institution: { getInstitutionById: async () => ({ id: "institution-id", name: "Test Institution", status: true }), ...overrides.institution },
     hash: { generateFileHash: async () => "a".repeat(64), ...overrides.hash },
     ipfs: { uploadFileToIPFS: async () => ({ cid: VALID_CID, provider: "pinata", pinned: true, gatewayUrl: `https://gateway/${VALID_CID}` }), ...overrides.ipfs },
     audit: { createAuditLog: async (entry) => { state.audits.push(entry); }, ...overrides.audit },
@@ -200,8 +208,15 @@ const loadControllerWithMocks = (overrides = {}) => {
       },
       ...overrides.blockchain,
     },
+    semanticManifest: {
+      buildSemanticManifestFromFile: async ({ sourceHash }) => ({
+        version: 1,
+        sourceSha256: sourceHash,
+        fields: {},
+      }),
+    },
   };
-  for (const key of ["credential", "student", "institution", "hash", "ipfs", "audit", "blockchain"]) {
+  for (const key of ["credential", "student", "institution", "hash", "ipfs", "audit", "blockchain", "semanticManifest"]) {
     require.cache[paths[key]] = { id: paths[key], filename: paths[key], loaded: true, exports: mocks[key] };
   }
   delete require.cache[paths.controller];

@@ -116,6 +116,142 @@ const createProcessingCredential =
     return result.rows[0];
   };
 
+
+const setCredentialSemanticManifest =
+  async (
+    id,
+    {
+      manifest,
+      version,
+      sourceHash,
+    }
+  ) => {
+    if (
+      !id ||
+      !manifest ||
+      !Number.isInteger(version) ||
+      version < 1 ||
+      !/^[a-f0-9]{64}$/i.test(
+        String(sourceHash || "")
+      )
+    ) {
+      const error =
+        new Error(
+          "Invalid semantic manifest persistence input."
+        );
+
+      error.code =
+        "SEMANTIC_MANIFEST_INVALID";
+
+      throw error;
+    }
+
+    const normalizedHash =
+      String(sourceHash)
+        .toLowerCase();
+
+    const result =
+      await pool.query(
+        `UPDATE credentials
+         SET
+           semantic_manifest = $2::jsonb,
+           semantic_manifest_version = $3,
+           semantic_manifest_source_hash = $4,
+           semantic_manifest_generated_at = CURRENT_TIMESTAMP,
+           updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1
+           AND status = 'processing'
+           AND LOWER(certificate_hash) = $4
+         RETURNING
+           id,
+           certificate_hash,
+           semantic_manifest,
+           semantic_manifest_version,
+           semantic_manifest_source_hash,
+           semantic_manifest_generated_at,
+           status,
+           updated_at`,
+        [
+          id,
+          JSON.stringify(
+            manifest
+          ),
+          version,
+          normalizedHash,
+        ]
+      );
+
+    return result.rows[0];
+  };
+
+
+const backfillCredentialSemanticManifest =
+  async (
+    id,
+    {
+      manifest,
+      version,
+      sourceHash,
+    }
+  ) => {
+    if (
+      !id ||
+      !manifest ||
+      !Number.isInteger(version) ||
+      version < 1 ||
+      !/^[a-f0-9]{64}$/i.test(
+        String(sourceHash || "")
+      )
+    ) {
+      const error =
+        new Error(
+          "Invalid semantic manifest backfill input."
+        );
+
+      error.code =
+        "SEMANTIC_MANIFEST_INVALID";
+
+      throw error;
+    }
+
+    const normalizedHash =
+      String(sourceHash)
+        .toLowerCase();
+
+    const result =
+      await pool.query(
+        `UPDATE credentials
+         SET
+           semantic_manifest = $2::jsonb,
+           semantic_manifest_version = $3,
+           semantic_manifest_source_hash = $4,
+           semantic_manifest_generated_at = CURRENT_TIMESTAMP,
+           updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1
+           AND semantic_manifest IS NULL
+           AND LOWER(certificate_hash) = $4
+         RETURNING
+           id,
+           certificate_hash,
+           semantic_manifest,
+           semantic_manifest_version,
+           semantic_manifest_source_hash,
+           semantic_manifest_generated_at,
+           status,
+           updated_at`,
+        [
+          id,
+          JSON.stringify(
+            manifest
+          ),
+          version,
+          normalizedHash,
+        ]
+      );
+
+    return result.rows[0];
+  };
+
 const setCredentialStructuredProof =
   async (
     id,
@@ -864,6 +1000,8 @@ const findCredentialByHash =
 module.exports = {
   createCredential,
   createProcessingCredential,
+  setCredentialSemanticManifest,
+  backfillCredentialSemanticManifest,
   setCredentialStructuredProof,
   updateCredentialIpfsData,
   markCredentialFailed,
