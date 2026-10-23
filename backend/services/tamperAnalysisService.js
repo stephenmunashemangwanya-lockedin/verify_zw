@@ -210,17 +210,54 @@ const candidatesFor = (
         ),
       ].filter(Boolean);
 
-const containsCandidate = (
-  text,
-  candidates
-) =>
-  candidates.some(
-    (candidate) =>
-      candidate &&
-      text.includes(
-        candidate
-      )
-  );
+// Match complete field values, never substrings of another credential attribute.
+const FIELD_LABELS = {
+  student_name: ["holder", "holder name", "student name", "name"],
+  student_number: ["student number", "registration number", "student / registration number"],
+  institution_name: ["institution", "institution name"],
+  programme: ["programme", "program"],
+  qualification: ["qualification"],
+  classification: ["classification", "degree classification"],
+  issue_date: ["issue date", "award date", "date of issue", "date of award"],
+};
+
+const textLines = text => String(text ?? "").split(/\r?\n/).map(normalise).filter(Boolean);
+const labelledLine = line => {
+  for (const [field, labels] of Object.entries(FIELD_LABELS)) {
+    for (const label of labels) {
+      if (line === label) return { field, value: "" };
+      if (!line.startsWith(label)) continue;
+      const suffix = line.slice(label.length).match(/^\s*[:\u2013\u2014-]\s*(.*)$/);
+      if (suffix) return { field, value: suffix[1] };
+    }
+  }
+  return null;
+};
+const parseFields = lines => {
+  const fields = {};
+  const unclaimed = [];
+  let current = null;
+  for (const line of lines) {
+    const labelled = labelledLine(line);
+    if (labelled) {
+      current = [];
+      (fields[labelled.field] ||= []).push(current);
+      if (labelled.value) current.push(labelled.value);
+    } else if (current) {
+      current.push(line);
+    } else {
+      unclaimed.push(line);
+    }
+  }
+  return { fields, unclaimed };
+};
+const compareFieldValue = (parts, matches) => {
+  if (matches(normalise(parts.join(" ")))) return "UNCHANGED";
+  // Extra lines may be a footer or a continuation. Do not guess that an
+  // unchanged complete value followed by unrelated text was altered.
+  if (parts.length > 1 && parts.some(matches)) return "NOT_ASSESSABLE";
+  return "ALTERED";
+};
 
 async function extractPdfTextFromBytes(
   bytes
@@ -239,6 +276,7 @@ async function extractPdfTextFromBytes(
       disableWorker: true,
     });
 
+  try {
   const pdf =
     await loadingTask.promise;
 
@@ -259,20 +297,41 @@ async function extractPdfTextFromBytes(
       await page
         .getTextContent();
 
-    pages.push(
-      content.items
-        .map(
-          (item) =>
-            typeof item.str ===
-            "string"
-              ? item.str
-              : ""
-        )
-        .join(" ")
-    );
+    // Preserve logical PDF lines so overlapping values retain their field context.
+    const lines = [];
+    let line = "";
+    let previousY = null;
+    let previousRight = null;
+    for (const item of content.items) {
+      if (typeof item.str !== "string") continue;
+      const y = item.transform?.[5];
+      if (line && previousY !== null && Number.isFinite(y) && Math.abs(y - previousY) > 2) {
+        lines.push(line);
+        line = "";
+        previousRight = null;
+      }
+      const x = item.transform?.[4];
+      const gap = Number.isFinite(x) && previousRight !== null ? x - previousRight : null;
+      const separator = line && item.str && !/\s$/.test(line) && !/^\s/.test(item.str) &&
+        (gap === null || gap > Math.max(0.5, Number(item.height || 0) * 0.1)) ? " " : "";
+      line += separator + item.str;
+      previousRight = Number.isFinite(x) ? x + Number(item.width || 0) : null;
+      previousY = Number.isFinite(y) ? y : previousY;
+      if (item.hasEOL) {
+        lines.push(line);
+        line = "";
+        previousY = null;
+        previousRight = null;
+      }
+    }
+    if (line) lines.push(line);
+    pages.push(lines.join("\n"));
   }
 
-  return pages.join(" ");
+  return pages.join("\n");
+  } finally {
+    await loadingTask.destroy();
+  }
 }
 
 async function extractPdfText(
@@ -293,153 +352,62 @@ function analyseSemanticChanges({
   submittedText,
   baselineText,
 }) {
-  const submitted =
-    normalise(
-      submittedText
-    );
+  const baselineLines = textLines(baselineText);
+  const submittedLines = textLines(submittedText);
+  const original = parseFields(baselineLines);
+  const submitted = parseFields(submittedLines);
+  const fields = FIELD_DEFINITIONS.map(definition => {
+    const officialValue = firstCredentialValue(credential, definition.credentialKeys);
+    const field = { field: definition.key, label: definition.label, status: "NOT_AVAILABLE" };
+    if (!officialValue) return field;
+    field.status = "NOT_ASSESSABLE";
+    if (!baselineLines.length) return field;
 
-  /*
-   * undefined means a direct legacy/unit call.
-   * null means production analysis attempted
-   * baseline acquisition but it was unavailable.
-   */
-  const baselineWasRequested =
-    baselineText !==
-    undefined;
+    const candidates = candidatesFor(definition, officialValue);
+    const matches = value => candidates.includes(value);
+    const baselineValues = original.fields[definition.key] || [];
+    const submittedValues = submitted.fields[definition.key] || [];
+    if (baselineValues.length) {
+      // Duplicate or inconsistent labels make exact attribution unsafe.
+      if (baselineValues.length !== 1 || !matches(normalise(baselineValues[0].join(" ")))) return field;
+      if (submittedValues.length !== 1) return field;
+      field.status = compareFieldValue(submittedValues[0], matches);
+      return field;
+    }
 
-  const baselineAvailable =
-    typeof baselineText ===
-      "string" &&
-    Boolean(
-      normalise(
-        baselineText
-      )
-    );
-
-  const baseline =
-    baselineAvailable
-      ? normalise(
-          baselineText
-        )
-      : "";
-
-  const fields =
-    FIELD_DEFINITIONS.map(
-      (definition) => {
-        const officialValue =
-          firstCredentialValue(
-            credential,
-            definition
-              .credentialKeys
-          );
-
-        if (!officialValue) {
-          return {
-            field:
-              definition.key,
-
-            label:
-              definition.label,
-
-            status:
-              "NOT_AVAILABLE",
-          };
+    // Without labels, require a unique complete line and a value belonging to
+    // only one credential field. A qualification containing a programme is not
+    // evidence that the programme was separately printed.
+    const baselineMatches = original.unclaimed.filter(line => matches(line));
+    if (baselineMatches.length !== 1) return field;
+    const sharedValue = FIELD_DEFINITIONS.some(other => {
+      if (other.key === definition.key) return false;
+      const value = firstCredentialValue(credential, other.credentialKeys);
+      return value && candidatesFor(other, value).some(candidate => candidates.includes(candidate));
+    });
+    if (sharedValue) return field;
+    if (submittedValues.length === 1) {
+      field.status = compareFieldValue(submittedValues[0], matches);
+      return field;
+    }
+    if (submittedValues.length > 1) return field;
+    const submittedMatches = submitted.unclaimed.filter(line => matches(line));
+    if (submittedMatches.length > 1) return field;
+    // A value moved beneath a different label cannot be attributed safely.
+    if (!submittedMatches.length && Object.values(submitted.fields).flat().some(parts => matches(normalise(parts.join(" "))))) return field;
+    // Unlabelled reflow is ambiguous rather than evidence of a changed value.
+    if (!submittedMatches.length) {
+      for (let start = 0; start < submitted.unclaimed.length; start += 1) {
+        let value = submitted.unclaimed[start];
+        for (let end = start + 1; end < submitted.unclaimed.length && value.length <= Math.max(...candidates.map(c => c.length)); end += 1) {
+          value += ` ${submitted.unclaimed[end]}`;
+          if (matches(value)) return field;
         }
-
-        const candidates =
-          candidatesFor(
-            definition,
-            officialValue
-          );
-
-        const submittedHas =
-          containsCandidate(
-            submitted,
-            candidates
-          );
-
-        /*
-         * Preserve compatibility for direct
-         * analyseSemanticChanges unit calls.
-         */
-        if (
-          !baselineWasRequested
-        ) {
-          return {
-            field:
-              definition.key,
-
-            label:
-              definition.label,
-
-            status:
-              submittedHas
-                ? "UNCHANGED"
-                : "ALTERED",
-          };
-        }
-
-        /*
-         * If the authoritative PDF baseline
-         * could not be obtained, absence of a
-         * value must not be called tampering.
-         */
-        if (
-          !baselineAvailable
-        ) {
-          return {
-            field:
-              definition.key,
-
-            label:
-              definition.label,
-
-            status:
-              submittedHas
-                ? "UNCHANGED"
-                : "NOT_ASSESSABLE",
-          };
-        }
-
-        const baselineHas =
-          containsCandidate(
-            baseline,
-            candidates
-          );
-
-        /*
-         * The field was not printed on the
-         * authoritative original certificate,
-         * therefore it cannot be localised as
-         * altered from document text.
-         */
-        if (!baselineHas) {
-          return {
-            field:
-              definition.key,
-
-            label:
-              definition.label,
-
-            status:
-              "NOT_ASSESSABLE",
-          };
-        }
-
-        return {
-          field:
-            definition.key,
-
-          label:
-            definition.label,
-
-          status:
-            submittedHas
-              ? "UNCHANGED"
-              : "ALTERED",
-        };
       }
-    );
+    }
+    field.status = submittedMatches.length === 1 ? "UNCHANGED" : "ALTERED";
+    return field;
+  });
 
   const alteredFields =
     fields.filter(

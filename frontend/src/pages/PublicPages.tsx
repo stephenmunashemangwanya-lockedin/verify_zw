@@ -860,7 +860,8 @@ export function VerificationResult({
           > =>
             Boolean(field) &&
             typeof field ===
-              "object"
+              "object" &&
+            field.status === "ALTERED"
         )
       : [];
 

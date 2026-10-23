@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+﻿import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -119,6 +119,22 @@ describe("public experience", () => {
     expect(await screen.findByText("Credential verified")).toBeInTheDocument();
     expect(screen.queryByText(/No PDF was submitted/)).not.toBeInTheDocument();
   });
+  it("shows holder-only localisation for a PDF supplied through a QR token URL", async () => {
+    vi.mocked(api.post).mockResolvedValue({ data: { data: { result: "TAMPERED", tamperAnalysis: {
+      analysisAvailable: true, alteredFields: [{ field: "student_name", label: "Holder name", status: "ALTERED" }],
+    } } } });
+    render(<MemoryRouter initialEntries={["/verify/token/public-token"]}>
+      <Routes><Route path="/verify/token/:token" element={<VerifyPage />} /></Routes>
+    </MemoryRouter>);
+    fireEvent.change(screen.getByLabelText("Certificate PDF (optional)"), {
+      target: { files: [new File(["%PDF-1.4\n%%EOF"], "changed.pdf", { type: "application/pdf" })] },
+    });
+    fireEvent.submit(screen.getByText("Verify now").closest("form")!);
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith("/verify/token/public-token/file", expect.any(FormData)));
+    const list = await screen.findByRole("list", { name: "Detected alterations" });
+    expect(within(list).getAllByRole("listitem")).toHaveLength(1);
+    expect(list).toHaveTextContent("Holder name: ALTERED");
+  });
   it("rejects unsafe uploads before API submission", async () => {
     render(
       <MemoryRouter>
@@ -183,6 +199,35 @@ describe("public experience", () => {
       screen.queryByText(/secret-hash|secret-token|provider stack/)
     ).not.toBeInTheDocument();
   });
+  it("shows only genuinely ALTERED fields without authoritative values", () => {
+    render(<VerificationResult data={{ result: "TAMPERED", tamperAnalysis: {
+      analysisAvailable: true, alteredFields: [
+        { field: "student_name", label: "Holder name", status: "ALTERED", officialValue: "Private correct name" },
+        { field: "institution_name", label: "Institution", status: "NOT_ASSESSABLE" },
+        { field: "programme", label: "Programme", status: "UNCHANGED" },
+        { field: "classification", label: "Degree classification", status: "NOT_AVAILABLE" },
+      ],
+    } }} />);
+    const list = screen.getByRole("list", { name: "Detected alterations" });
+    expect(within(list).getAllByRole("listitem")).toHaveLength(1);
+    expect(list).toHaveTextContent("Holder name: ALTERED");
+    expect(list).not.toHaveTextContent(/Institution|Programme|classification/);
+    expect(screen.queryByText("Private correct name")).not.toBeInTheDocument();
+  });
+  it("retains the metadata-only fallback without invented semantic changes", () => {
+    render(<VerificationResult data={{ result: "TAMPERED", tamperAnalysis: {
+      analysisAvailable: true, alteredFields: [], semanticTamperingDetected: false,
+      structuralAnalysis: { changes: [{ type: "PDF_METADATA_CHANGED", label: "PDF metadata changed", count: 1 }] },
+    } }} />);
+    expect(screen.getByText(/no semantic credential field alteration could be localised/)).toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "Detected alterations" })).not.toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "Document structure changes" })).toHaveTextContent("PDF metadata changed");
+  });
+  it("reports unavailable analysis without claiming any altered field", () => {
+    render(<VerificationResult data={{ result: "TAMPERED", tamperAnalysis: { analysisAvailable: false, alteredFields: [] } }} />);
+    expect(screen.getByText(/field-level localisation was unavailable/)).toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "Detected alterations" })).not.toBeInTheDocument();
+  });
   it("renders a usable 404 page", () => {
     render(
       <MemoryRouter>
@@ -194,3 +239,5 @@ describe("public experience", () => {
     ).toBeInTheDocument();
   });
 });
+
+
