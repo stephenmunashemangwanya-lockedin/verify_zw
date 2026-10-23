@@ -233,30 +233,512 @@ const labelledLine = line => {
   }
   return null;
 };
+
+const HOLDER_CONTEXT_CUES = [
+  "this is to certify that",
+  "this certifies that",
+  "awarded to",
+  "presented to",
+];
+
+const QUALIFICATION_CONTEXT_CUES = [
+  "has been awarded the qualification",
+  "has been awarded qualification",
+  "qualification awarded",
+];
+
+const isContextCue = line =>
+  HOLDER_CONTEXT_CUES.includes(line) ||
+  QUALIFICATION_CONTEXT_CUES.includes(line) ||
+  /^issued by\s+/.test(line);
+
+const pushParsedField = (
+  fields,
+  field,
+  parts
+) => {
+  const existing =
+    (fields[field] ||= []);
+
+  const candidate =
+    normalise(
+      parts.join(" ")
+    );
+
+  /*
+   * Preserve empty labelled values because:
+   *
+   *   Student Number:
+   *
+   * is meaningful evidence that a previously populated field has
+   * become blank.
+   */
+  if (!candidate) {
+    existing.push([]);
+    return;
+  }
+
+  if (
+    existing.some(
+      current =>
+        normalise(
+          current.join(" ")
+        ) === candidate
+    )
+  ) {
+    return;
+  }
+
+  existing.push(parts);
+};
+
+/*
+ * Parse explicit labels, known certificate context and conservative
+ * unlabelled values without allowing one labelled field to swallow
+ * every line that follows it.
+ */
 const parseFields = lines => {
   const fields = {};
-  const unclaimed = [];
-  let current = null;
-  for (const line of lines) {
-    const labelled = labelledLine(line);
-    if (labelled) {
-      current = [];
-      (fields[labelled.field] ||= []).push(current);
-      if (labelled.value) current.push(labelled.value);
-    } else if (current) {
-      current.push(line);
+  const consumed =
+    new Set();
+
+  /*
+   * Pass 1:
+   * explicit labels.
+   *
+   * A same-line label owns only its same-line value.
+   * A label with no value may consume only the immediately following
+   * non-label/non-context line.
+   */
+  for (
+    let index = 0;
+    index < lines.length;
+    index += 1
+  ) {
+    const line =
+      lines[index];
+
+    const labelled =
+      labelledLine(line);
+
+    if (!labelled) continue;
+
+    consumed.add(index);
+
+    if (labelled.value) {
+      pushParsedField(
+        fields,
+        labelled.field,
+        [labelled.value]
+      );
+
+      continue;
+    }
+
+    const next =
+      lines[index + 1];
+
+    if (
+      next &&
+      !labelledLine(next) &&
+      !isContextCue(next)
+    ) {
+      pushParsedField(
+        fields,
+        labelled.field,
+        [next]
+      );
+
+      consumed.add(
+        index + 1
+      );
     } else {
-      unclaimed.push(line);
+      pushParsedField(
+        fields,
+        labelled.field,
+        []
+      );
     }
   }
-  return { fields, unclaimed };
+
+  /*
+   * Pass 2:
+   * semantic certificate context.
+   *
+   * These anchors describe meaning, not a particular filename or
+   * student's values.
+   */
+  for (
+    let index = 0;
+    index < lines.length;
+    index += 1
+  ) {
+    const line =
+      lines[index];
+
+    if (
+      HOLDER_CONTEXT_CUES.includes(
+        line
+      )
+    ) {
+      consumed.add(index);
+
+      const value =
+        lines[index + 1];
+
+      if (
+        value &&
+        !consumed.has(index + 1) &&
+        !labelledLine(value) &&
+        !isContextCue(value)
+      ) {
+        pushParsedField(
+          fields,
+          "student_name",
+          [value]
+        );
+
+        consumed.add(
+          index + 1
+        );
+      }
+
+      continue;
+    }
+
+    if (
+      QUALIFICATION_CONTEXT_CUES.includes(
+        line
+      )
+    ) {
+      consumed.add(index);
+
+      const value =
+        lines[index + 1];
+
+      if (
+        value &&
+        !consumed.has(index + 1) &&
+        !labelledLine(value) &&
+        !isContextCue(value)
+      ) {
+        pushParsedField(
+          fields,
+          "qualification",
+          [value]
+        );
+
+        consumed.add(
+          index + 1
+        );
+      }
+
+      continue;
+    }
+
+    /*
+     * Common certificate sentence:
+     *
+     * Issued by <institution> on <date>
+     */
+    const issued =
+      line.match(
+        /^issued by\s+(.+?)\s+on\s+(.+)$/
+      );
+
+    if (issued) {
+      pushParsedField(
+        fields,
+        "institution_name",
+        [issued[1]]
+      );
+
+      pushParsedField(
+        fields,
+        "issue_date",
+        [issued[2]]
+      );
+
+      consumed.add(index);
+    }
+  }
+
+  const unclaimed =
+    lines.filter(
+      (_line, index) =>
+        !consumed.has(index)
+    );
+
+  return {
+    fields,
+    unclaimed,
+  };
 };
+
+
+/*
+ * Find an authoritative value that has been reflowed across adjacent
+ * unclaimed lines. A match is accepted only when exactly one candidate
+ * occurrence can be reconstructed.
+ */
+const findUniqueCandidateInLines = (
+  lines,
+  matches,
+  maximumLines = 3
+) => {
+  const normalised =
+    lines
+      .map(normalise)
+      .filter(Boolean);
+
+  const hits = [];
+
+  for (
+    let start = 0;
+    start < normalised.length;
+    start += 1
+  ) {
+    let value = "";
+
+    for (
+      let end = start;
+      end < normalised.length &&
+      end < start + maximumLines;
+      end += 1
+    ) {
+      value =
+        normalise(
+          value
+            ? value + " " + normalised[end]
+            : normalised[end]
+        );
+
+      if (matches(value)) {
+        hits.push({
+          start,
+          end,
+          value,
+        });
+      }
+    }
+  }
+
+  return hits.length === 1
+    ? hits[0].value
+    : null;
+};
+
+/*
+ * An explicitly labelled value may wrap onto following PDF text lines.
+ * Reconstruct only when the partial labelled text plus one unique
+ * adjacent/unclaimed segment equals an authoritative candidate exactly.
+ */
+const reconstructLabelledCandidate = (
+  parts,
+  unclaimed,
+  matches
+) => {
+  const base =
+    normalise(
+      parts.join(" ")
+    );
+
+  if (
+    base &&
+    matches(base)
+  ) {
+    return base;
+  }
+
+  /*
+   * Do not allow a completely empty label to adopt arbitrary distant
+   * document text. "Holder:" with nothing after it must remain empty.
+   */
+  if (!base) {
+    return null;
+  }
+
+  const lines =
+    unclaimed
+      .map(normalise)
+      .filter(Boolean);
+
+  const hits = [];
+
+  for (
+    let start = 0;
+    start < lines.length;
+    start += 1
+  ) {
+    let segment = "";
+
+    for (
+      let end = start;
+      end < lines.length &&
+      end < start + 3;
+      end += 1
+    ) {
+      segment =
+        normalise(
+          segment
+            ? segment + " " + lines[end]
+            : lines[end]
+        );
+
+      const forward =
+        normalise(
+          base + " " + segment
+        );
+
+      const reverse =
+        normalise(
+          segment + " " + base
+        );
+
+      if (matches(forward)) {
+        hits.push(forward);
+      }
+
+      if (
+        reverse !== forward &&
+        matches(reverse)
+      ) {
+        hits.push(reverse);
+      }
+    }
+  }
+
+  return hits.length === 1
+    ? hits[0]
+    : null;
+};
+
 const compareFieldValue = (parts, matches) => {
   if (matches(normalise(parts.join(" ")))) return "UNCHANGED";
   // Extra lines may be a footer or a continuation. Do not guess that an
   // unchanged complete value followed by unrelated text was altered.
   if (parts.length > 1 && parts.some(matches)) return "NOT_ASSESSABLE";
   return "ALTERED";
+};
+
+
+/*
+ * Reconstruct text in visual page order rather than PDF content-stream
+ * order. PDF editors can append replacement text at the end of the
+ * content stream even though it is visually positioned beside the
+ * original field.
+ */
+const spatialTextLines = items => {
+  const glyphs = items
+    .filter(
+      item =>
+        typeof item?.str === "string" &&
+        item.str.length > 0 &&
+        Number.isFinite(item.transform?.[4]) &&
+        Number.isFinite(item.transform?.[5])
+    )
+    .map(item => ({
+      text: item.str,
+      x: Number(item.transform[4]),
+      y: Number(item.transform[5]),
+      width: Number(item.width || 0),
+      height: Number(item.height || 0),
+    }));
+
+  glyphs.sort(
+    (a, b) =>
+      (b.y - a.y) ||
+      (a.x - b.x)
+  );
+
+  const rows = [];
+
+  for (const glyph of glyphs) {
+    let row = null;
+    let bestDistance = Infinity;
+
+    for (const candidate of rows) {
+      const distance =
+        Math.abs(candidate.y - glyph.y);
+
+      if (
+        distance <= 2 &&
+        distance < bestDistance
+      ) {
+        row = candidate;
+        bestDistance = distance;
+      }
+    }
+
+    if (!row) {
+      row = {
+        y: glyph.y,
+        items: [],
+      };
+
+      rows.push(row);
+    }
+
+    row.items.push(glyph);
+  }
+
+  rows.sort(
+    (a, b) => b.y - a.y
+  );
+
+  return rows
+    .map(row => {
+      const parts =
+        row.items.sort(
+          (a, b) => a.x - b.x
+        );
+
+      let text = "";
+      let previousRight = null;
+
+      for (const item of parts) {
+        const raw =
+          String(item.text || "");
+
+        if (!raw) continue;
+
+        const right =
+          item.x + item.width;
+
+        if (!raw.trim()) {
+          previousRight = right;
+          continue;
+        }
+
+        const gap =
+          previousRight === null
+            ? null
+            : item.x - previousRight;
+
+        const threshold =
+          Math.max(
+            0.5,
+            Number(item.height || 0) * 0.08
+          );
+
+        const separator =
+          text &&
+          !/\s$/.test(text) &&
+          !/^\s/.test(raw) &&
+          gap !== null &&
+          gap > threshold
+            ? " "
+            : "";
+
+        text +=
+          separator + raw;
+
+        previousRight = right;
+      }
+
+      return text.trim();
+    })
+    .filter(Boolean);
 };
 
 async function extractPdfTextFromBytes(
@@ -297,35 +779,16 @@ async function extractPdfTextFromBytes(
       await page
         .getTextContent();
 
-    // Preserve logical PDF lines so overlapping values retain their field context.
-    const lines = [];
-    let line = "";
-    let previousY = null;
-    let previousRight = null;
-    for (const item of content.items) {
-      if (typeof item.str !== "string") continue;
-      const y = item.transform?.[5];
-      if (line && previousY !== null && Number.isFinite(y) && Math.abs(y - previousY) > 2) {
-        lines.push(line);
-        line = "";
-        previousRight = null;
-      }
-      const x = item.transform?.[4];
-      const gap = Number.isFinite(x) && previousRight !== null ? x - previousRight : null;
-      const separator = line && item.str && !/\s$/.test(line) && !/^\s/.test(item.str) &&
-        (gap === null || gap > Math.max(0.5, Number(item.height || 0) * 0.1)) ? " " : "";
-      line += separator + item.str;
-      previousRight = Number.isFinite(x) ? x + Number(item.width || 0) : null;
-      previousY = Number.isFinite(y) ? y : previousY;
-      if (item.hasEOL) {
-        lines.push(line);
-        line = "";
-        previousY = null;
-        previousRight = null;
-      }
-    }
-    if (line) lines.push(line);
-    pages.push(lines.join("\n"));
+    // Reconstruct logical lines from visual PDF coordinates.
+    // This handles replacement text appended later in the PDF stream.
+    const lines =
+      spatialTextLines(
+        content.items
+      );
+
+    pages.push(
+      lines.join("\n")
+    );
   }
 
   return pages.join("\n");
@@ -367,11 +830,91 @@ function analyseSemanticChanges({
     const matches = value => candidates.includes(value);
     const baselineValues = original.fields[definition.key] || [];
     const submittedValues = submitted.fields[definition.key] || [];
-    if (baselineValues.length) {
-      // Duplicate or inconsistent labels make exact attribution unsafe.
-      if (baselineValues.length !== 1 || !matches(normalise(baselineValues[0].join(" ")))) return field;
-      if (submittedValues.length !== 1) return field;
-      field.status = compareFieldValue(submittedValues[0], matches);
+    
+if (baselineValues.length) {
+      /*
+       * The authoritative baseline may wrap a labelled value onto the
+       * following visual line. Establish the baseline only through an
+       * exact candidate reconstruction.
+       */
+      if (baselineValues.length !== 1) return field;
+
+      const baselineResolved =
+        reconstructLabelledCandidate(
+          baselineValues[0],
+          original.unclaimed,
+          matches
+        );
+
+      if (!baselineResolved) return field;
+
+      /*
+       * If the official value has moved beneath another semantic label,
+       * ownership is ambiguous. Do not accuse this field.
+       */
+      const ownedElsewhere =
+        Object.entries(
+          submitted.fields
+        ).some(
+          ([key, values]) =>
+            key !== definition.key &&
+            values.some(
+              parts =>
+                matches(
+                  normalise(
+                    parts.join(" ")
+                  )
+                )
+            )
+        );
+
+      if (ownedElsewhere) return field;
+
+      /*
+       * A presentation change may remove the label while leaving the
+       * complete authoritative value visible elsewhere.
+       */
+      if (submittedValues.length === 0) {
+        const unlabelledMatch =
+          findUniqueCandidateInLines(
+            submitted.unclaimed,
+            matches
+          );
+
+        if (unlabelledMatch) {
+          field.status = "UNCHANGED";
+        }
+
+        return field;
+      }
+
+      if (submittedValues.length !== 1) {
+        return field;
+      }
+
+      const submittedResolved =
+        reconstructLabelledCandidate(
+          submittedValues[0],
+          submitted.unclaimed,
+          matches
+        );
+
+      if (submittedResolved) {
+        field.status = "UNCHANGED";
+        return field;
+      }
+
+      /*
+       * At this point the baseline is authoritative and assessable but
+       * the submitted labelled value no longer resolves to the official
+       * value. Empty, replaced or altered values are genuine changes.
+       */
+      field.status =
+        compareFieldValue(
+          submittedValues[0],
+          matches
+        );
+
       return field;
     }
 
