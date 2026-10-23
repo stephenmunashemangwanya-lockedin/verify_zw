@@ -1,3 +1,7 @@
+const {
+  analyseAnchoredSemanticChanges,
+} = require("./pdfSemanticAnchorService");
+
 ﻿const fs =
   require("fs/promises");
 
@@ -1011,6 +1015,78 @@ async function loadOfficialBaseline(
   }
 }
 
+
+function mergeSemanticResults(
+  primary,
+  anchored
+) {
+  if (
+    !anchored?.analysisAvailable
+  ) {
+    return primary;
+  }
+
+  const anchoredByField =
+    new Map(
+      anchored.fields.map(
+        field => [
+          field.field,
+          field,
+        ]
+      )
+    );
+
+  const fields =
+    primary.fields.map(
+      field => {
+        const anchor =
+          anchoredByField.get(
+            field.field
+          );
+
+        if (
+          !anchor ||
+          ![
+            "ALTERED",
+            "UNCHANGED",
+          ].includes(
+            anchor.status
+          )
+        ) {
+          return field;
+        }
+
+        return {
+          field:
+            field.field,
+
+          label:
+            field.label,
+
+          status:
+            anchor.status,
+        };
+      }
+    );
+
+  const alteredFields =
+    fields.filter(
+      field =>
+        field.status ===
+        "ALTERED"
+    );
+
+  return {
+    fields,
+
+    alteredFields,
+
+    semanticTamperingDetected:
+      alteredFields.length >
+      0,
+  };
+}
+
 async function analyseTamperedPdf({
   filePath,
   credential,
@@ -1037,6 +1113,18 @@ async function analyseTamperedPdf({
             : null,
       });
 
+    const anchoredSemantic =
+      await analyseAnchoredSemanticChanges({
+        credential,
+        filePath,
+      });
+
+    const resolvedSemantic =
+      mergeSemanticResults(
+        semantic,
+        anchoredSemantic
+      );
+
     const structuralAnalysis =
       await analysePdfStructureAgainstOfficial({
         filePath,
@@ -1057,15 +1145,13 @@ async function analyseTamperedPdf({
       },
 
       semanticTamperingDetected:
-        semantic
-          .semanticTamperingDetected,
+        resolvedSemantic.semanticTamperingDetected,
 
       alteredFields:
-        semantic
-          .alteredFields,
+        resolvedSemantic.alteredFields,
 
       fields:
-        semantic.fields,
+        resolvedSemantic.fields,
 
       structuralAnalysis,
     };
