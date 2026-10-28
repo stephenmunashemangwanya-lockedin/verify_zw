@@ -1,0 +1,13 @@
+warning: in the working copy of 'backend/models/credentialModel.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/services/structuredCredentialService.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/services/verificationService.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/App.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/layouts/AppLayout.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/Management.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/test/credentialManagement.test.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/test/userManagement.test.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/types/index.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'test/accreditationVerification.test.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'test/migrationBootstrap.test.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'test/publicVerification.test.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'test/structuredCredentialVerification.test.js', LF will be replaced by CRLF the next time Git touches it

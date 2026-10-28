@@ -1,0 +1,32 @@
+warning: in the working copy of 'backend/controllers/credentialController.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/controllers/userController.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/models/credentialModel.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/models/verificationModel.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/routes/credentialRoutes.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/services/verificationService.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/openapi.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/layouts/AppLayout.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/test/public.test.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/test/userManagement.test.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'test/credentialPhase7.test.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'test/credentialRevocation.test.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'test/migrationBootstrap.test.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'test/qrSupport.test.js', LF will be replaced by CRLF the next time Git touches it
+ backend/controllers/credentialController.js |  562 [32m+++++++++[m[31m--[m
+ backend/controllers/userController.js       | 1016 [32m+++++++++++++++++[m[31m--[m
+ backend/models/credentialModel.js           | 1414 [32m+++++++++++++++[m[31m------------[m
+ backend/models/verificationModel.js         |   19 [32m+[m[31m-[m
+ backend/routes/credentialRoutes.js          |  160 [32m++[m[31m-[m
+ backend/services/verificationService.js     |  628 [32m+++++++++++[m[31m-[m
+ docs/openapi.yaml                           |    6 [32m+[m
+ frontend/src/layouts/AppLayout.tsx          |    6 [32m+[m
+ frontend/src/test/public.test.tsx           |   46 [32m+[m[31m-[m
+ frontend/src/test/userManagement.test.tsx   |    2 [32m+[m[31m-[m
+ package-lock.json                           |   10 [32m+[m
+ package.json                                |    1 [32m+[m
+ test/apiDocumentation.test.js               |    2 [32m+[m[31m-[m
+ test/credentialPhase7.test.js               |  454 [32m++++++++[m[31m-[m
+ test/credentialRevocation.test.js           |  972 [32m++++++++++++++++[m[31m--[m
+ test/migrationBootstrap.test.js             |   13 [32m+[m[31m-[m
+ test/qrSupport.test.js                      |  264 [32m+++[m[31m--[m
+ 17 files changed, 4521 insertions(+), 1054 deletions(-)

@@ -1,0 +1,534 @@
+[
+  {
+    "originalName": "VerifyZW_Certificate_001_Biotechnology.pdf",
+    "tamperedName": "VerifyZW_Certificate_001_Biotechnology_TAMPERED.pdf",
+    "paired": true,
+    "originalText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Biotechnology Student 001\nStudent Number: VZW-STU-001\nhas been awarded the qualification\nBiotechnology\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-BIO-2026-720CCDF2\nVERIFYZW\nVerification Code: F03FDD12CA28\nTEST CREDENTIAL\nCredential UUID: 582f68b1-70aa-4860-b764-dbf2eb7c1b36\nSHA-256 Fingerprint: 09F0DB9553F04BD3CC8AECAD345BA7EF D83204FB33D3A675C69B6DCE0F23E672\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "tamperedText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nBiotechnlogy\nVerifyZWStudent 001\nStudent Number: VZW-STU-001\nhas been awarded the qualification\nBiotechnology\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-BIO-2026-9C168161\nVERIFYZW\nVerification Code: EC32A156C480\nTEST CREDENTIAL\nCredential UUID: c5a86d3e-2d78-4a43-93c8-37f1233ae0ca\nSHA-256 Fingerprint: 19D798DC0B1E9CA2DBB34421AF8E7730 879B0643DE8CCE2AE869F99A0516CB9B\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "removed": [
+      "VerifyZW Biotechnology Student 001",
+      "Certificate Serial: VZW-BIO-2026-720CCDF2",
+      "Verification Code: F03FDD12CA28",
+      "Credential UUID: 582f68b1-70aa-4860-b764-dbf2eb7c1b36",
+      "SHA-256 Fingerprint: 09F0DB9553F04BD3CC8AECAD345BA7EF D83204FB33D3A675C69B6DCE0F23E672"
+    ],
+    "added": [
+      "Biotechnlogy",
+      "VerifyZWStudent 001",
+      "Certificate Serial: VZW-BIO-2026-9C168161",
+      "Verification Code: EC32A156C480",
+      "Credential UUID: c5a86d3e-2d78-4a43-93c8-37f1233ae0ca",
+      "SHA-256 Fingerprint: 19D798DC0B1E9CA2DBB34421AF8E7730 879B0643DE8CCE2AE869F99A0516CB9B"
+    ]
+  },
+  {
+    "originalName": "VerifyZW_Certificate_002_Biotechnology.pdf",
+    "tamperedName": "VerifyZW_Certificate_002_Biotechnology_TAMPERED.pdf",
+    "paired": true,
+    "originalText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Biotechnology Student 002\nStudent Number: VZW-STU-002\nhas been awarded the qualification\nBiotechnology\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-BIO-2026-3EF04C5F\nVERIFYZW\nVerification Code: 6A476DF1BD33\nTEST CREDENTIAL\nCredential UUID: ce9567f6-5d94-4303-ac14-6c858eb0048f\nSHA-256 Fingerprint: 6E18A711E40465AB921A4CF873DE3AA2 376A6CBE383E29E43FFB4EE95407B805\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "tamperedText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nStudent Number: VZW-STU-002\nhas been awarded the qualification\nBiotechnology\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-BIO-2026-E89D39BC\nVERIFYZW\nVerification Code: E70341B53487\nTEST CREDENTIAL\nCredential UUID: 6fb388ef-569c-4020-8e51-09c433991bf4\nSHA-256 Fingerprint: B3AA48B797EF4F8F50A935EED5683912 07F109F226B4732AE14454B5CD5DA538\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "removed": [
+      "VerifyZW Biotechnology Student 002",
+      "Certificate Serial: VZW-BIO-2026-3EF04C5F",
+      "Verification Code: 6A476DF1BD33",
+      "Credential UUID: ce9567f6-5d94-4303-ac14-6c858eb0048f",
+      "SHA-256 Fingerprint: 6E18A711E40465AB921A4CF873DE3AA2 376A6CBE383E29E43FFB4EE95407B805"
+    ],
+    "added": [
+      "Certificate Serial: VZW-BIO-2026-E89D39BC",
+      "Verification Code: E70341B53487",
+      "Credential UUID: 6fb388ef-569c-4020-8e51-09c433991bf4",
+      "SHA-256 Fingerprint: B3AA48B797EF4F8F50A935EED5683912 07F109F226B4732AE14454B5CD5DA538"
+    ]
+  },
+  {
+    "originalName": "VerifyZW_Certificate_003_Biotechnology.pdf",
+    "tamperedName": "VerifyZW_Certificate_003_Biotechnology_TAMPERED.pdf",
+    "paired": true,
+    "originalText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Biotechnology Student 003\nStudent Number: VZW-STU-003\nhas been awarded the qualification\nBiotechnology\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-BIO-2026-4EB64133\nVERIFYZW\nVerification Code: DD5235228532\nTEST CREDENTIAL\nCredential UUID: 1c9042dd-df13-4f73-a710-a388427ae008\nSHA-256 Fingerprint: 4FECD9D4C25F4B4CCB44CE233A2D35AC 3752B0395B20B24C09F79424D12A695B\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "tamperedText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Biotechnology Student 003\nStudent Number: VZW-STU-004\nhas been awarded the qualification\nBiotechnology\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-BIO-2026-47EBB788\nVERIFYZW\nVerification Code: A2EE22966114\nTEST CREDENTIAL\nCredential UUID: 3fb140b4-5101-45f8-ba6e-186febbfa054\nSHA-256 Fingerprint: 83DEFF48C8E83ED7B177BBB991E0A55D 97DB3D0B5D4D4E260EE273A7ED5EE712\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "removed": [
+      "Student Number: VZW-STU-003",
+      "Certificate Serial: VZW-BIO-2026-4EB64133",
+      "Verification Code: DD5235228532",
+      "Credential UUID: 1c9042dd-df13-4f73-a710-a388427ae008",
+      "SHA-256 Fingerprint: 4FECD9D4C25F4B4CCB44CE233A2D35AC 3752B0395B20B24C09F79424D12A695B"
+    ],
+    "added": [
+      "Student Number: VZW-STU-004",
+      "Certificate Serial: VZW-BIO-2026-47EBB788",
+      "Verification Code: A2EE22966114",
+      "Credential UUID: 3fb140b4-5101-45f8-ba6e-186febbfa054",
+      "SHA-256 Fingerprint: 83DEFF48C8E83ED7B177BBB991E0A55D 97DB3D0B5D4D4E260EE273A7ED5EE712"
+    ]
+  },
+  {
+    "originalName": "VerifyZW_Certificate_004_Biotechnology.pdf",
+    "tamperedName": "VerifyZW_Certificate_004_Biotechnology_TAMPERED.pdf",
+    "paired": true,
+    "originalText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Biotechnology Student 004\nStudent Number: VZW-STU-004\nhas been awarded the qualification\nBiotechnology\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-BIO-2026-99BA55D9\nVERIFYZW\nVerification Code: 8D55A29C4DB3\nTEST CREDENTIAL\nCredential UUID: cb9bb520-653f-4f12-9d18-5811d4e7e099\nSHA-256 Fingerprint: 3930E168D2F5F5540D05C1AD7B8D86B1 478AB421BD57B6390EFF7A8BB119DD5E\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "tamperedText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nBiotechology\nVerifyZWStudent 004\nStudent Number: VZW-STU-004\nhas been awarded the qualification\nBiotechnology\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-BIO-2026-8507B205\nVERIFYZW\nVerification Code: B681D2034BD4\nTEST CREDENTIAL\nCredential UUID: cd7238a2-d02f-48c1-81b2-9b13aff7bc59\nSHA-256 Fingerprint: 755D9156A82D59B0F7F34EEC12F11E7D E8BB2CF61919457833876F4CD39568B2\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "removed": [
+      "VerifyZW Biotechnology Student 004",
+      "Certificate Serial: VZW-BIO-2026-99BA55D9",
+      "Verification Code: 8D55A29C4DB3",
+      "Credential UUID: cb9bb520-653f-4f12-9d18-5811d4e7e099",
+      "SHA-256 Fingerprint: 3930E168D2F5F5540D05C1AD7B8D86B1 478AB421BD57B6390EFF7A8BB119DD5E"
+    ],
+    "added": [
+      "Biotechology",
+      "VerifyZWStudent 004",
+      "Certificate Serial: VZW-BIO-2026-8507B205",
+      "Verification Code: B681D2034BD4",
+      "Credential UUID: cd7238a2-d02f-48c1-81b2-9b13aff7bc59",
+      "SHA-256 Fingerprint: 755D9156A82D59B0F7F34EEC12F11E7D E8BB2CF61919457833876F4CD39568B2"
+    ]
+  },
+  {
+    "originalName": "VerifyZW_Certificate_005_Biotechnology.pdf",
+    "tamperedName": "VerifyZW_Certificate_005_Biotechnology_TAMPERED.pdf",
+    "paired": true,
+    "originalText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Biotechnology Student 005\nStudent Number: VZW-STU-005\nhas been awarded the qualification\nBiotechnology\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-BIO-2026-22F6DEBE\nVERIFYZW\nVerification Code: 2AD0BBEDC962\nTEST CREDENTIAL\nCredential UUID: 2eae4f25-ac75-4732-88ba-2c723ec82a8f\nSHA-256 Fingerprint: 7570D53B16EC7D4B3AD4B5EEA3D41F14 AC25FA6336BD28B3CA1C37465DD2E68A\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "tamperedText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nBiotechnlogy\nVerifyZWStudent 005\nStudent Number: VZW-STU-005\nhas been awarded the qualification\nBiotechnology\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-BIO-2026-0C828A0E\nVERIFYZW\nVerification Code: C96EE39BE506\nTEST CREDENTIAL\nCredential UUID: 0e62d557-95d4-4cf0-aa72-a521b99205b3\nSHA-256 Fingerprint: 4BB295CD36BD6FB94FC4B0703EA122B8 E2E54D381B55C350699138761A813C50\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "removed": [
+      "VerifyZW Biotechnology Student 005",
+      "Certificate Serial: VZW-BIO-2026-22F6DEBE",
+      "Verification Code: 2AD0BBEDC962",
+      "Credential UUID: 2eae4f25-ac75-4732-88ba-2c723ec82a8f",
+      "SHA-256 Fingerprint: 7570D53B16EC7D4B3AD4B5EEA3D41F14 AC25FA6336BD28B3CA1C37465DD2E68A"
+    ],
+    "added": [
+      "Biotechnlogy",
+      "VerifyZWStudent 005",
+      "Certificate Serial: VZW-BIO-2026-0C828A0E",
+      "Verification Code: C96EE39BE506",
+      "Credential UUID: 0e62d557-95d4-4cf0-aa72-a521b99205b3",
+      "SHA-256 Fingerprint: 4BB295CD36BD6FB94FC4B0703EA122B8 E2E54D381B55C350699138761A813C50"
+    ]
+  },
+  {
+    "originalName": "VerifyZW_Certificate_006_Biotechnology.pdf",
+    "tamperedName": "VerifyZW_Certificate_006_Biotechnology_TAMPERED.pdf",
+    "paired": true,
+    "originalText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Biotechnology Student 006\nStudent Number: VZW-STU-006\nhas been awarded the qualification\nBiotechnology\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-BIO-2026-852D6667\nVERIFYZW\nVerification Code: FACD72D3C4EE\nTEST CREDENTIAL\nCredential UUID: ca65724e-d651-4b0a-a98b-24adf753930f\nSHA-256 Fingerprint: F70F47B1C438827287167DE43015912D EA24F9B4178D63B3D9BC33AEF5A1C339\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "tamperedText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nStudent Number: VZW-STU-006\nhas been awarded the qualification\nBiotechnology\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-BIO-2026-77B07CEF\nVERIFYZW\nVerification Code: BE218A4EFCE4\nTEST CREDENTIAL\nCredential UUID: 35d9567a-5fe2-4ec9-942b-89dedde023b0\nSHA-256 Fingerprint: 9DF9578A7AB8A9B0C092454B69893F68 5E7CC77CBAB5702B55A6424AFD302F6A\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "removed": [
+      "VerifyZW Biotechnology Student 006",
+      "Certificate Serial: VZW-BIO-2026-852D6667",
+      "Verification Code: FACD72D3C4EE",
+      "Credential UUID: ca65724e-d651-4b0a-a98b-24adf753930f",
+      "SHA-256 Fingerprint: F70F47B1C438827287167DE43015912D EA24F9B4178D63B3D9BC33AEF5A1C339"
+    ],
+    "added": [
+      "Certificate Serial: VZW-BIO-2026-77B07CEF",
+      "Verification Code: BE218A4EFCE4",
+      "Credential UUID: 35d9567a-5fe2-4ec9-942b-89dedde023b0",
+      "SHA-256 Fingerprint: 9DF9578A7AB8A9B0C092454B69893F68 5E7CC77CBAB5702B55A6424AFD302F6A"
+    ]
+  },
+  {
+    "originalName": "VerifyZW_Certificate_007_Biotechnology.pdf",
+    "tamperedName": "VerifyZW_Certificate_007_Biotechnology_TAMPERED.pdf",
+    "paired": true,
+    "originalText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Biotechnology Student 007\nStudent Number: VZW-STU-007\nhas been awarded the qualification\nBiotechnology\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-BIO-2026-162A72E4\nVERIFYZW\nVerification Code: AE708A3D8C64\nTEST CREDENTIAL\nCredential UUID: 23beee58-4e4a-4335-9fab-7a51f7df0c6c\nSHA-256 Fingerprint: C5FBA7528FEB7D4461D2A4708574864F 49933E887816780D2981A4577AB31F7D\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "tamperedText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Biotechnology Student 007\nStudent Number: VZW-STU-008\nhas been awarded the qualification\nBiotechnology\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-BIO-2026-CAF7D178\nVERIFYZW\nVerification Code: F44515C5AA59\nTEST CREDENTIAL\nCredential UUID: 1187ae1c-18b5-4341-b53f-4efde1149009\nSHA-256 Fingerprint: 78FAD73222FBB037EC53BAED1491E371 1B219909D6A310FDE80FB11DD7190E93\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "removed": [
+      "Student Number: VZW-STU-007",
+      "Certificate Serial: VZW-BIO-2026-162A72E4",
+      "Verification Code: AE708A3D8C64",
+      "Credential UUID: 23beee58-4e4a-4335-9fab-7a51f7df0c6c",
+      "SHA-256 Fingerprint: C5FBA7528FEB7D4461D2A4708574864F 49933E887816780D2981A4577AB31F7D"
+    ],
+    "added": [
+      "Student Number: VZW-STU-008",
+      "Certificate Serial: VZW-BIO-2026-CAF7D178",
+      "Verification Code: F44515C5AA59",
+      "Credential UUID: 1187ae1c-18b5-4341-b53f-4efde1149009",
+      "SHA-256 Fingerprint: 78FAD73222FBB037EC53BAED1491E371 1B219909D6A310FDE80FB11DD7190E93"
+    ]
+  },
+  {
+    "originalName": "VerifyZW_Certificate_008_Biotechnology.pdf",
+    "tamperedName": "VerifyZW_Certificate_008_Biotechnology_TAMPERED.pdf",
+    "paired": true,
+    "originalText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Biotechnology Student 008\nStudent Number: VZW-STU-008\nhas been awarded the qualification\nBiotechnology\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-BIO-2026-41FBF57B\nVERIFYZW\nVerification Code: 5F8DE784C29F\nTEST CREDENTIAL\nCredential UUID: 20752375-78e9-4f08-89b0-2b97793d4f6c\nSHA-256 Fingerprint: F6493038D3B81EC6EEE67FBD3F2451D5 1DF35092ADC7FA54B6164F81B3AFDDF4\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "tamperedText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nBiotechology\nVerifyZWStudent 008\nStudent Number: VZW-STU-008\nhas been awarded the qualification\nBiotechnology\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-BIO-2026-D5E5D157\nVERIFYZW\nVerification Code: 0533A86A0911\nTEST CREDENTIAL\nCredential UUID: b3bbe2eb-edb5-43b2-af44-d8ae3f492767\nSHA-256 Fingerprint: 0E4D674EFB830CB3A3A4B3B673B2258B 8463E6C32F646880BFCEEADF48A68281\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "removed": [
+      "VerifyZW Biotechnology Student 008",
+      "Certificate Serial: VZW-BIO-2026-41FBF57B",
+      "Verification Code: 5F8DE784C29F",
+      "Credential UUID: 20752375-78e9-4f08-89b0-2b97793d4f6c",
+      "SHA-256 Fingerprint: F6493038D3B81EC6EEE67FBD3F2451D5 1DF35092ADC7FA54B6164F81B3AFDDF4"
+    ],
+    "added": [
+      "Biotechology",
+      "VerifyZWStudent 008",
+      "Certificate Serial: VZW-BIO-2026-D5E5D157",
+      "Verification Code: 0533A86A0911",
+      "Credential UUID: b3bbe2eb-edb5-43b2-af44-d8ae3f492767",
+      "SHA-256 Fingerprint: 0E4D674EFB830CB3A3A4B3B673B2258B 8463E6C32F646880BFCEEADF48A68281"
+    ]
+  },
+  {
+    "originalName": "VerifyZW_Certificate_009_Biotechnology.pdf",
+    "tamperedName": "VerifyZW_Certificate_009_Biotechnology_TAMPERED.pdf",
+    "paired": true,
+    "originalText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Biotechnology Student 009\nStudent Number: VZW-STU-009\nhas been awarded the qualification\nBiotechnology\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-BIO-2026-6F37D324\nVERIFYZW\nVerification Code: B0DF0653CBED\nTEST CREDENTIAL\nCredential UUID: 9b2c92d9-3363-4190-a731-eaf22d965ad0\nSHA-256 Fingerprint: C48B310FA16659FEBA4ED1788B5938F5 02BC64A9F5CA75AE03FD88E1FE69E7EE\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "tamperedText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nBiotechnlogy\nVerifyZWStudent 009\nStudent Number: VZW-STU-009\nhas been awarded the qualification\nBiotechnology\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-BIO-2026-54497725\nVERIFYZW\nVerification Code: A9A36C96FAC3\nTEST CREDENTIAL\nCredential UUID: 99c978e2-4a54-4e19-aa87-da7137983234\nSHA-256 Fingerprint: 1217F563C413EAC1E10353F285E73E39 EAEA9FCF62A6AA4659C6FAD41364F2CD\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "removed": [
+      "VerifyZW Biotechnology Student 009",
+      "Certificate Serial: VZW-BIO-2026-6F37D324",
+      "Verification Code: B0DF0653CBED",
+      "Credential UUID: 9b2c92d9-3363-4190-a731-eaf22d965ad0",
+      "SHA-256 Fingerprint: C48B310FA16659FEBA4ED1788B5938F5 02BC64A9F5CA75AE03FD88E1FE69E7EE"
+    ],
+    "added": [
+      "Biotechnlogy",
+      "VerifyZWStudent 009",
+      "Certificate Serial: VZW-BIO-2026-54497725",
+      "Verification Code: A9A36C96FAC3",
+      "Credential UUID: 99c978e2-4a54-4e19-aa87-da7137983234",
+      "SHA-256 Fingerprint: 1217F563C413EAC1E10353F285E73E39 EAEA9FCF62A6AA4659C6FAD41364F2CD"
+    ]
+  },
+  {
+    "originalName": "VerifyZW_Certificate_010_Biotechnology.pdf",
+    "tamperedName": "VerifyZW_Certificate_010_Biotechnology_TAMPERED.pdf",
+    "paired": true,
+    "originalText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Biotechnology Student 010\nStudent Number: VZW-STU-010\nhas been awarded the qualification\nBiotechnology\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-BIO-2026-9FC855C2\nVERIFYZW\nVerification Code: BB74BBF86B7C\nTEST CREDENTIAL\nCredential UUID: fd750d99-f55e-4317-b3c7-1299c0a7ec98\nSHA-256 Fingerprint: 48D8A265A529BD0758A7AE9A1E151A0A 64EBB40108AABA0B55996544AA709D72\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "tamperedText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nStudent Number: VZW-STU-010\nhas been awarded the qualification\nBiotechnology\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-BIO-2026-CBA5E875\nVERIFYZW\nVerification Code: 9AC5E04697AE\nTEST CREDENTIAL\nCredential UUID: 838a28bc-89e3-4622-973b-215866f8f748\nSHA-256 Fingerprint: E63F916C8F79D6AE6AF613851548F796 DD682927451E3588CC9A60420F28F82C\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "removed": [
+      "VerifyZW Biotechnology Student 010",
+      "Certificate Serial: VZW-BIO-2026-9FC855C2",
+      "Verification Code: BB74BBF86B7C",
+      "Credential UUID: fd750d99-f55e-4317-b3c7-1299c0a7ec98",
+      "SHA-256 Fingerprint: 48D8A265A529BD0758A7AE9A1E151A0A 64EBB40108AABA0B55996544AA709D72"
+    ],
+    "added": [
+      "Certificate Serial: VZW-BIO-2026-CBA5E875",
+      "Verification Code: 9AC5E04697AE",
+      "Credential UUID: 838a28bc-89e3-4622-973b-215866f8f748",
+      "SHA-256 Fingerprint: E63F916C8F79D6AE6AF613851548F796 DD682927451E3588CC9A60420F28F82C"
+    ]
+  },
+  {
+    "originalName": "VerifyZW_Certificate_011_Mechanics.pdf",
+    "tamperedName": "VerifyZW_Certificate_011_Mechanics_TAMPERED.pdf",
+    "paired": true,
+    "originalText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Mechanics Student 011\nStudent Number: VZW-STU-011\nhas been awarded the qualification\nMechanics\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-MEC-2026-759BE7A7\nVERIFYZW\nVerification Code: 63250DE4B3B4\nTEST CREDENTIAL\nCredential UUID: 603b7989-6783-446d-a619-01e48b6481ec\nSHA-256 Fingerprint: 0A420D4C4F3BE2E29A8BEC53A4B175EA FEF11BE57E8A44ADA5D4DE275816518C\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "tamperedText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Mechanics Student 011\nStudent Number: VZW-STU-012\nhas been awarded the qualification\nMechanics\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-MEC-2026-5BA8A4B7\nVERIFYZW\nVerification Code: 87B04674F430\nTEST CREDENTIAL\nCredential UUID: 6565e01a-c86a-4aaa-a79e-f29e14cefe1b\nSHA-256 Fingerprint: B523D1EF3CAC4A571BEA92E1DCAABCAA D6C22C8B7CDBD7B5426B786D56B435AD\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "removed": [
+      "Student Number: VZW-STU-011",
+      "Certificate Serial: VZW-MEC-2026-759BE7A7",
+      "Verification Code: 63250DE4B3B4",
+      "Credential UUID: 603b7989-6783-446d-a619-01e48b6481ec",
+      "SHA-256 Fingerprint: 0A420D4C4F3BE2E29A8BEC53A4B175EA FEF11BE57E8A44ADA5D4DE275816518C"
+    ],
+    "added": [
+      "Student Number: VZW-STU-012",
+      "Certificate Serial: VZW-MEC-2026-5BA8A4B7",
+      "Verification Code: 87B04674F430",
+      "Credential UUID: 6565e01a-c86a-4aaa-a79e-f29e14cefe1b",
+      "SHA-256 Fingerprint: B523D1EF3CAC4A571BEA92E1DCAABCAA D6C22C8B7CDBD7B5426B786D56B435AD"
+    ]
+  },
+  {
+    "originalName": "VerifyZW_Certificate_012_Mechanics.pdf",
+    "tamperedName": "VerifyZW_Certificate_012_Mechanics_TAMPERED.pdf",
+    "paired": true,
+    "originalText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Mechanics Student 012\nStudent Number: VZW-STU-012\nhas been awarded the qualification\nMechanics\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-MEC-2026-F3F13993\nVERIFYZW\nVerification Code: 8304FEA6228C\nTEST CREDENTIAL\nCredential UUID: ae70264e-4351-4489-b374-0dacf28487b7\nSHA-256 Fingerprint: 95D1AF202A18B81193F4875C43621FA5 A264E2640470456CF74D195DBD4AAE97\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "tamperedText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nMechanlcs\nVerifyZWStudent 012\nStudent Number: VZW-STU-012\nhas been awarded the qualification\nMechanics\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-MEC-2026-6800A8B8\nVERIFYZW\nVerification Code: 1224C227F336\nTEST CREDENTIAL\nCredential UUID: 8115b6a3-c58c-4f17-987b-09c53b73bfe2\nSHA-256 Fingerprint: A02AA139C738021BAC2017FE3EF5E96E EB4DB2632556748AEFED3987F67478AC\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "removed": [
+      "VerifyZW Mechanics Student 012",
+      "Certificate Serial: VZW-MEC-2026-F3F13993",
+      "Verification Code: 8304FEA6228C",
+      "Credential UUID: ae70264e-4351-4489-b374-0dacf28487b7",
+      "SHA-256 Fingerprint: 95D1AF202A18B81193F4875C43621FA5 A264E2640470456CF74D195DBD4AAE97"
+    ],
+    "added": [
+      "Mechanlcs",
+      "VerifyZWStudent 012",
+      "Certificate Serial: VZW-MEC-2026-6800A8B8",
+      "Verification Code: 1224C227F336",
+      "Credential UUID: 8115b6a3-c58c-4f17-987b-09c53b73bfe2",
+      "SHA-256 Fingerprint: A02AA139C738021BAC2017FE3EF5E96E EB4DB2632556748AEFED3987F67478AC"
+    ]
+  },
+  {
+    "originalName": "VerifyZW_Certificate_013_Mechanics.pdf",
+    "tamperedName": "VerifyZW_Certificate_013_Mechanics_TAMPERED.pdf",
+    "paired": true,
+    "originalText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Mechanics Student 013\nStudent Number: VZW-STU-013\nhas been awarded the qualification\nMechanics\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-MEC-2026-E09FAB55\nVERIFYZW\nVerification Code: E23CA5A88951\nTEST CREDENTIAL\nCredential UUID: 8b44a8cc-ab14-4764-8c83-7a51c7f7a3f8\nSHA-256 Fingerprint: 2107D1E0DF40A9E86595ED3332CBACA3 B9C896AD2EEDD3062DE31D926710E7D1\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "tamperedText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nMechancs\nVerifyZWStudent 013\nStudent Number: VZW-STU-013\nhas been awarded the qualification\nMechanics\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-MEC-2026-5A29A4A5\nVERIFYZW\nVerification Code: ADCE83C2F1B5\nTEST CREDENTIAL\nCredential UUID: 0130a8ac-13fc-46a6-b9ca-c53f2e09cf7b\nSHA-256 Fingerprint: 9EC8B6E60B830F11FDE901D3391CFDD0 58163ACFD9C868395AA7B1D9BFBC0A83\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "removed": [
+      "VerifyZW Mechanics Student 013",
+      "Certificate Serial: VZW-MEC-2026-E09FAB55",
+      "Verification Code: E23CA5A88951",
+      "Credential UUID: 8b44a8cc-ab14-4764-8c83-7a51c7f7a3f8",
+      "SHA-256 Fingerprint: 2107D1E0DF40A9E86595ED3332CBACA3 B9C896AD2EEDD3062DE31D926710E7D1"
+    ],
+    "added": [
+      "Mechancs",
+      "VerifyZWStudent 013",
+      "Certificate Serial: VZW-MEC-2026-5A29A4A5",
+      "Verification Code: ADCE83C2F1B5",
+      "Credential UUID: 0130a8ac-13fc-46a6-b9ca-c53f2e09cf7b",
+      "SHA-256 Fingerprint: 9EC8B6E60B830F11FDE901D3391CFDD0 58163ACFD9C868395AA7B1D9BFBC0A83"
+    ]
+  },
+  {
+    "originalName": "VerifyZW_Certificate_014_Mechanics.pdf",
+    "tamperedName": "VerifyZW_Certificate_014_Mechanics_TAMPERED.pdf",
+    "paired": true,
+    "originalText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Mechanics Student 014\nStudent Number: VZW-STU-014\nhas been awarded the qualification\nMechanics\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-MEC-2026-9B3D0811\nVERIFYZW\nVerification Code: DB70285D1881\nTEST CREDENTIAL\nCredential UUID: 391f1b70-9462-4cac-9177-71b7afa29071\nSHA-256 Fingerprint: 3303E6523FD602612CCDCB14F859FA3A 78792E4069C234013788FCB64FF7005D\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "tamperedText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nStudent Number: VZW-STU-014\nhas been awarded the qualification\nMechanics\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-MEC-2026-1AC142FB\nVERIFYZW\nVerification Code: 5486BCB944F0\nTEST CREDENTIAL\nCredential UUID: 2945a2ab-94ef-4874-aa6b-d4ca46e0b860\nSHA-256 Fingerprint: FC56809C83A8918F2DCEF249360DAEDA EC4AF8ADE59FF876F51601CEB10FFAD9\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "removed": [
+      "VerifyZW Mechanics Student 014",
+      "Certificate Serial: VZW-MEC-2026-9B3D0811",
+      "Verification Code: DB70285D1881",
+      "Credential UUID: 391f1b70-9462-4cac-9177-71b7afa29071",
+      "SHA-256 Fingerprint: 3303E6523FD602612CCDCB14F859FA3A 78792E4069C234013788FCB64FF7005D"
+    ],
+    "added": [
+      "Certificate Serial: VZW-MEC-2026-1AC142FB",
+      "Verification Code: 5486BCB944F0",
+      "Credential UUID: 2945a2ab-94ef-4874-aa6b-d4ca46e0b860",
+      "SHA-256 Fingerprint: FC56809C83A8918F2DCEF249360DAEDA EC4AF8ADE59FF876F51601CEB10FFAD9"
+    ]
+  },
+  {
+    "originalName": "VerifyZW_Certificate_015_Mechanics.pdf",
+    "tamperedName": "VerifyZW_Certificate_015_Mechanics_TAMPERED.pdf",
+    "paired": true,
+    "originalText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Mechanics Student 015\nStudent Number: VZW-STU-015\nhas been awarded the qualification\nMechanics\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-MEC-2026-D439008E\nVERIFYZW\nVerification Code: A509BAC40D82\nTEST CREDENTIAL\nCredential UUID: 213cd647-b958-4a60-9b89-0b955480f6e9\nSHA-256 Fingerprint: 461FA18D082BBED9A7217DAF1CF3C018 ABE65AE9037A555F0E6642A1F2DB86BA\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "tamperedText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Mechanics Student 015\nStudent Number: VZW-STU-016\nhas been awarded the qualification\nMechanics\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-MEC-2026-3D0D14BF\nVERIFYZW\nVerification Code: E94DDD2B7C04\nTEST CREDENTIAL\nCredential UUID: 7fc3009f-deca-4807-bb17-83df7a4159c7\nSHA-256 Fingerprint: BDE23283CC2615B89F740061BF3ACE41 3BAF4991C00FDA4F36D4CC52AFD23BF5\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "removed": [
+      "Student Number: VZW-STU-015",
+      "Certificate Serial: VZW-MEC-2026-D439008E",
+      "Verification Code: A509BAC40D82",
+      "Credential UUID: 213cd647-b958-4a60-9b89-0b955480f6e9",
+      "SHA-256 Fingerprint: 461FA18D082BBED9A7217DAF1CF3C018 ABE65AE9037A555F0E6642A1F2DB86BA"
+    ],
+    "added": [
+      "Student Number: VZW-STU-016",
+      "Certificate Serial: VZW-MEC-2026-3D0D14BF",
+      "Verification Code: E94DDD2B7C04",
+      "Credential UUID: 7fc3009f-deca-4807-bb17-83df7a4159c7",
+      "SHA-256 Fingerprint: BDE23283CC2615B89F740061BF3ACE41 3BAF4991C00FDA4F36D4CC52AFD23BF5"
+    ]
+  },
+  {
+    "originalName": "VerifyZW_Certificate_016_Mechanics.pdf",
+    "tamperedName": "VerifyZW_Certificate_016_Mechanics_TAMPERED.pdf",
+    "paired": true,
+    "originalText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Mechanics Student 016\nStudent Number: VZW-STU-016\nhas been awarded the qualification\nMechanics\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-MEC-2026-5E412C3E\nVERIFYZW\nVerification Code: 3F6B5BF8B531\nTEST CREDENTIAL\nCredential UUID: 49892760-705a-41a4-b6ea-50a05eb19198\nSHA-256 Fingerprint: BDC473B5976BEA958313AFD66BEF53E3 FE8DDAAB97C9D7A994C590069C1F843D\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "tamperedText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nMechanlcs\nVerifyZWStudent 016\nStudent Number: VZW-STU-016\nhas been awarded the qualification\nMechanics\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-MEC-2026-95826C36\nVERIFYZW\nVerification Code: CE57418ABC93\nTEST CREDENTIAL\nCredential UUID: 5d80d158-5750-46d4-9b18-349d462b5c10\nSHA-256 Fingerprint: 3629BE5574D96F7F84B90A632631347C 645D4BDBAAD8521CB2245BB141231606\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "removed": [
+      "VerifyZW Mechanics Student 016",
+      "Certificate Serial: VZW-MEC-2026-5E412C3E",
+      "Verification Code: 3F6B5BF8B531",
+      "Credential UUID: 49892760-705a-41a4-b6ea-50a05eb19198",
+      "SHA-256 Fingerprint: BDC473B5976BEA958313AFD66BEF53E3 FE8DDAAB97C9D7A994C590069C1F843D"
+    ],
+    "added": [
+      "Mechanlcs",
+      "VerifyZWStudent 016",
+      "Certificate Serial: VZW-MEC-2026-95826C36",
+      "Verification Code: CE57418ABC93",
+      "Credential UUID: 5d80d158-5750-46d4-9b18-349d462b5c10",
+      "SHA-256 Fingerprint: 3629BE5574D96F7F84B90A632631347C 645D4BDBAAD8521CB2245BB141231606"
+    ]
+  },
+  {
+    "originalName": "VerifyZW_Certificate_017_Mechanics.pdf",
+    "tamperedName": "VerifyZW_Certificate_017_Mechanics_TAMPERED.pdf",
+    "paired": true,
+    "originalText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Mechanics Student 017\nStudent Number: VZW-STU-017\nhas been awarded the qualification\nMechanics\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-MEC-2026-B379FDEA\nVERIFYZW\nVerification Code: 4434DB578950\nTEST CREDENTIAL\nCredential UUID: 8ed86981-a9eb-4405-9408-fc1a7e17d835\nSHA-256 Fingerprint: F9DB08102C5D294E7D49E2D747363438 989F9F80D55C057FA5A0AE1272AF2D88\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "tamperedText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nMechancs\nVerifyZWStudent 017\nStudent Number: VZW-STU-017\nhas been awarded the qualification\nMechanics\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-MEC-2026-00BE9F13\nVERIFYZW\nVerification Code: 79FABED4F084\nTEST CREDENTIAL\nCredential UUID: 6ced72e4-2bde-4611-84ef-25dca4452bb2\nSHA-256 Fingerprint: 8E27A4EF1CA7CBB40A09C52DB4554F48 ADA22079FB368D59A3EB27ED7CF6DD14\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "removed": [
+      "VerifyZW Mechanics Student 017",
+      "Certificate Serial: VZW-MEC-2026-B379FDEA",
+      "Verification Code: 4434DB578950",
+      "Credential UUID: 8ed86981-a9eb-4405-9408-fc1a7e17d835",
+      "SHA-256 Fingerprint: F9DB08102C5D294E7D49E2D747363438 989F9F80D55C057FA5A0AE1272AF2D88"
+    ],
+    "added": [
+      "Mechancs",
+      "VerifyZWStudent 017",
+      "Certificate Serial: VZW-MEC-2026-00BE9F13",
+      "Verification Code: 79FABED4F084",
+      "Credential UUID: 6ced72e4-2bde-4611-84ef-25dca4452bb2",
+      "SHA-256 Fingerprint: 8E27A4EF1CA7CBB40A09C52DB4554F48 ADA22079FB368D59A3EB27ED7CF6DD14"
+    ]
+  },
+  {
+    "originalName": "VerifyZW_Certificate_018_Mechanics.pdf",
+    "tamperedName": "VerifyZW_Certificate_018_Mechanics_TAMPERED.pdf",
+    "paired": true,
+    "originalText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Mechanics Student 018\nStudent Number: VZW-STU-018\nhas been awarded the qualification\nMechanics\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-MEC-2026-42268AA5\nVERIFYZW\nVerification Code: E7B38F715D5D\nTEST CREDENTIAL\nCredential UUID: e87fb990-56e6-4e1a-96c4-f81bde4ac157\nSHA-256 Fingerprint: 56ADD3E5C6A3FABF09B5624DDADF2C32 0887C2A0CEE1A31CDAF7A75A393A2F81\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "tamperedText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nStudent Number: VZW-STU-018\nhas been awarded the qualification\nMechanics\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-MEC-2026-6BECD225\nVERIFYZW\nVerification Code: 6328790CDE72\nTEST CREDENTIAL\nCredential UUID: 47648fb4-bf7d-4a9c-bc0b-65d1845e8ef3\nSHA-256 Fingerprint: AFC3D69336DE25A6385B16D5380E2B8A 92FCB446D44360597A37559938DB883A\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "removed": [
+      "VerifyZW Mechanics Student 018",
+      "Certificate Serial: VZW-MEC-2026-42268AA5",
+      "Verification Code: E7B38F715D5D",
+      "Credential UUID: e87fb990-56e6-4e1a-96c4-f81bde4ac157",
+      "SHA-256 Fingerprint: 56ADD3E5C6A3FABF09B5624DDADF2C32 0887C2A0CEE1A31CDAF7A75A393A2F81"
+    ],
+    "added": [
+      "Certificate Serial: VZW-MEC-2026-6BECD225",
+      "Verification Code: 6328790CDE72",
+      "Credential UUID: 47648fb4-bf7d-4a9c-bc0b-65d1845e8ef3",
+      "SHA-256 Fingerprint: AFC3D69336DE25A6385B16D5380E2B8A 92FCB446D44360597A37559938DB883A"
+    ]
+  },
+  {
+    "originalName": "VerifyZW_Certificate_019_Mechanics.pdf",
+    "tamperedName": "VerifyZW_Certificate_019_Mechanics_TAMPERED.pdf",
+    "paired": true,
+    "originalText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Mechanics Student 019\nStudent Number: VZW-STU-019\nhas been awarded the qualification\nMechanics\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-MEC-2026-CD01B17C\nVERIFYZW\nVerification Code: 5A9EC4F1F062\nTEST CREDENTIAL\nCredential UUID: f894d354-8aff-40a6-bdbc-93b405182e98\nSHA-256 Fingerprint: CF0E91ECBF795BCD21A27925F9693A07 C25B157E72603269EA9F63E360D7D38E\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "tamperedText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Mechanics Student 019\nStudent Number: VZW-STU-010\nhas been awarded the qualification\nMechanics\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-MEC-2026-EE1B06CA\nVERIFYZW\nVerification Code: 73365CD1FA56\nTEST CREDENTIAL\nCredential UUID: 3e7e650f-a4a9-46a3-8956-0ecf0fdc3975\nSHA-256 Fingerprint: CEC02A5B6BF84A7BDB4BC00473DA7972 19CC169ABEDE519DCC490ABE33BFF642\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "removed": [
+      "Student Number: VZW-STU-019",
+      "Certificate Serial: VZW-MEC-2026-CD01B17C",
+      "Verification Code: 5A9EC4F1F062",
+      "Credential UUID: f894d354-8aff-40a6-bdbc-93b405182e98",
+      "SHA-256 Fingerprint: CF0E91ECBF795BCD21A27925F9693A07 C25B157E72603269EA9F63E360D7D38E"
+    ],
+    "added": [
+      "Student Number: VZW-STU-010",
+      "Certificate Serial: VZW-MEC-2026-EE1B06CA",
+      "Verification Code: 73365CD1FA56",
+      "Credential UUID: 3e7e650f-a4a9-46a3-8956-0ecf0fdc3975",
+      "SHA-256 Fingerprint: CEC02A5B6BF84A7BDB4BC00473DA7972 19CC169ABEDE519DCC490ABE33BFF642"
+    ]
+  },
+  {
+    "originalName": "VerifyZW_Certificate_020_Mechanics.pdf",
+    "tamperedName": "VerifyZW_Certificate_020_Mechanics_TAMPERED.pdf",
+    "paired": true,
+    "originalText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Mechanics Student 020\nStudent Number: VZW-STU-020\nhas been awarded the qualification\nMechanics\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-MEC-2026-3E98069C\nVERIFYZW\nVerification Code: 9B07AB6D197A\nTEST CREDENTIAL\nCredential UUID: 6275548b-fdcd-43dd-a019-7f19f5e4184c\nSHA-256 Fingerprint: 056C3EE3F46E5259BCE4ED4643E68B21 34726218F27E34C52C9B6FEAE86D571B\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "tamperedText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nMechanlcs\nVerifyZWStudent 020\nStudent Number: VZW-STU-020\nhas been awarded the qualification\nMechanics\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-MEC-2026-B15F881F\nVERIFYZW\nVerification Code: 1BB37B33CAAD\nTEST CREDENTIAL\nCredential UUID: 8f9a6c2b-64a6-456f-b298-383cc200b1b3\nSHA-256 Fingerprint: 1DD35585A8CBDC327C131A50707075F0 DE3EF979BD6480F8A8EAA488BB5B5C4F\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "removed": [
+      "VerifyZW Mechanics Student 020",
+      "Certificate Serial: VZW-MEC-2026-3E98069C",
+      "Verification Code: 9B07AB6D197A",
+      "Credential UUID: 6275548b-fdcd-43dd-a019-7f19f5e4184c",
+      "SHA-256 Fingerprint: 056C3EE3F46E5259BCE4ED4643E68B21 34726218F27E34C52C9B6FEAE86D571B"
+    ],
+    "added": [
+      "Mechanlcs",
+      "VerifyZWStudent 020",
+      "Certificate Serial: VZW-MEC-2026-B15F881F",
+      "Verification Code: 1BB37B33CAAD",
+      "Credential UUID: 8f9a6c2b-64a6-456f-b298-383cc200b1b3",
+      "SHA-256 Fingerprint: 1DD35585A8CBDC327C131A50707075F0 DE3EF979BD6480F8A8EAA488BB5B5C4F"
+    ]
+  },
+  {
+    "originalName": "VerifyZW_Certificate_021_Mechanics.pdf",
+    "tamperedName": "VerifyZW_Certificate_021_Mechanics_TAMPERED.pdf",
+    "paired": true,
+    "originalText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Mechanics Student 021\nStudent Number: VZW-STU-021\nhas been awarded the qualification\nMechanics\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-MEC-2026-8624452A\nVERIFYZW\nVerification Code: C8643087B116\nTEST CREDENTIAL\nCredential UUID: cb1baaf1-5cea-4166-bb81-285be17ea077\nSHA-256 Fingerprint: 56795F0FDDAC2972D9CC877EDEC4254B B3153AFA0F8AAD4519DA01D663E00329\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "tamperedText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nMechancs\nVerifyZWStudent 021\nStudent Number: VZW-STU-021\nhas been awarded the qualification\nMechanics\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-MEC-2026-9B14E3C3\nVERIFYZW\nVerification Code: 72E5E644E751\nTEST CREDENTIAL\nCredential UUID: c2d3f964-3ca7-415e-b3f2-f4ea7aa3e01a\nSHA-256 Fingerprint: A8CBF50B5673243A659E64F2ACFE14D1 F77624E5579A265A4967BBBE3B9F3CE1\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "removed": [
+      "VerifyZW Mechanics Student 021",
+      "Certificate Serial: VZW-MEC-2026-8624452A",
+      "Verification Code: C8643087B116",
+      "Credential UUID: cb1baaf1-5cea-4166-bb81-285be17ea077",
+      "SHA-256 Fingerprint: 56795F0FDDAC2972D9CC877EDEC4254B B3153AFA0F8AAD4519DA01D663E00329"
+    ],
+    "added": [
+      "Mechancs",
+      "VerifyZWStudent 021",
+      "Certificate Serial: VZW-MEC-2026-9B14E3C3",
+      "Verification Code: 72E5E644E751",
+      "Credential UUID: c2d3f964-3ca7-415e-b3f2-f4ea7aa3e01a",
+      "SHA-256 Fingerprint: A8CBF50B5673243A659E64F2ACFE14D1 F77624E5579A265A4967BBBE3B9F3CE1"
+    ]
+  },
+  {
+    "originalName": "VerifyZW_Certificate_022_Mechanics.pdf",
+    "tamperedName": "VerifyZW_Certificate_022_Mechanics_TAMPERED.pdf",
+    "paired": true,
+    "originalText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Mechanics Student 022\nStudent Number: VZW-STU-022\nhas been awarded the qualification\nMechanics\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-MEC-2026-8902B344\nVERIFYZW\nVerification Code: 18D81726C987\nTEST CREDENTIAL\nCredential UUID: ed336400-5db4-460c-b996-914da499d8c0\nSHA-256 Fingerprint: B6FCFFEE13AC463796419E2489B57B90 8F160CAEE1022BB2FAD917B21767B17C\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "tamperedText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nStudent Number: VZW-STU-022\nhas been awarded the qualification\nMechanics\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-MEC-2026-D38AAF12\nVERIFYZW\nVerification Code: FEE6682C0771\nTEST CREDENTIAL\nCredential UUID: 0639a4ae-b9c5-49ff-990b-9faf310ae632\nSHA-256 Fingerprint: E4D8DAEB1519BD499691CF8D01B74CA2 C5F8708A7BA853FFF1B8AC6198456EE8\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "removed": [
+      "VerifyZW Mechanics Student 022",
+      "Certificate Serial: VZW-MEC-2026-8902B344",
+      "Verification Code: 18D81726C987",
+      "Credential UUID: ed336400-5db4-460c-b996-914da499d8c0",
+      "SHA-256 Fingerprint: B6FCFFEE13AC463796419E2489B57B90 8F160CAEE1022BB2FAD917B21767B17C"
+    ],
+    "added": [
+      "Certificate Serial: VZW-MEC-2026-D38AAF12",
+      "Verification Code: FEE6682C0771",
+      "Credential UUID: 0639a4ae-b9c5-49ff-990b-9faf310ae632",
+      "SHA-256 Fingerprint: E4D8DAEB1519BD499691CF8D01B74CA2 C5F8708A7BA853FFF1B8AC6198456EE8"
+    ]
+  },
+  {
+    "originalName": "VerifyZW_Certificate_023_Mechanics.pdf",
+    "tamperedName": "VerifyZW_Certificate_023_Mechanics_TAMPERED.pdf",
+    "paired": true,
+    "originalText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Mechanics Student 023\nStudent Number: VZW-STU-023\nhas been awarded the qualification\nMechanics\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-MEC-2026-1C49339A\nVERIFYZW\nVerification Code: A07031AB8449\nTEST CREDENTIAL\nCredential UUID: 44721b50-52eb-4540-b4b9-3436b171c649\nSHA-256 Fingerprint: 44EF29DB06DC9778EBCE1A7C046296F8 B5860E1D6D76A8389EE2E001E5010C93\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "tamperedText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Mechanics Student 023\nStudent Number: VZW-STU-024\nhas been awarded the qualification\nMechanics\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-MEC-2026-8CB09583\nVERIFYZW\nVerification Code: BD7C2183349F\nTEST CREDENTIAL\nCredential UUID: f50774af-cda7-44e5-a09c-6a07de79d88b\nSHA-256 Fingerprint: 4459DAA3B5EE6EA7E538678A7A6F9F38 42509C92C59685805966733A449F23FB\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "removed": [
+      "Student Number: VZW-STU-023",
+      "Certificate Serial: VZW-MEC-2026-1C49339A",
+      "Verification Code: A07031AB8449",
+      "Credential UUID: 44721b50-52eb-4540-b4b9-3436b171c649",
+      "SHA-256 Fingerprint: 44EF29DB06DC9778EBCE1A7C046296F8 B5860E1D6D76A8389EE2E001E5010C93"
+    ],
+    "added": [
+      "Student Number: VZW-STU-024",
+      "Certificate Serial: VZW-MEC-2026-8CB09583",
+      "Verification Code: BD7C2183349F",
+      "Credential UUID: f50774af-cda7-44e5-a09c-6a07de79d88b",
+      "SHA-256 Fingerprint: 4459DAA3B5EE6EA7E538678A7A6F9F38 42509C92C59685805966733A449F23FB"
+    ]
+  },
+  {
+    "originalName": "VerifyZW_Certificate_024_Mechanics.pdf",
+    "tamperedName": "VerifyZW_Certificate_024_Mechanics_TAMPERED.pdf",
+    "paired": true,
+    "originalText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Mechanics Student 024\nStudent Number: VZW-STU-024\nhas been awarded the qualification\nMechanics\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-MEC-2026-77C6C7B3\nVERIFYZW\nVerification Code: D9E5BFCA7040\nTEST CREDENTIAL\nCredential UUID: d85a7462-ecba-4104-b95b-6f887d86fa88\nSHA-256 Fingerprint: 6F9BDB05678439EE9FE83A49A3C6B231 E71607997CFD47FCB1EC98FADFCC105E\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "tamperedText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nMechanlcs\nVerifyZWStudent 024\nStudent Number: VZW-STU-024\nhas been awarded the qualification\nMechanics\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-MEC-2026-5F8DB68B\nVERIFYZW\nVerification Code: 170E44AB86A0\nTEST CREDENTIAL\nCredential UUID: 7c8fd706-b823-4cd3-95ac-a98aa36a50d2\nSHA-256 Fingerprint: 6F92E2A5BD21B75F17A1992308843508 06B19E469A3A2FEAA40468A8B988334A\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "removed": [
+      "VerifyZW Mechanics Student 024",
+      "Certificate Serial: VZW-MEC-2026-77C6C7B3",
+      "Verification Code: D9E5BFCA7040",
+      "Credential UUID: d85a7462-ecba-4104-b95b-6f887d86fa88",
+      "SHA-256 Fingerprint: 6F9BDB05678439EE9FE83A49A3C6B231 E71607997CFD47FCB1EC98FADFCC105E"
+    ],
+    "added": [
+      "Mechanlcs",
+      "VerifyZWStudent 024",
+      "Certificate Serial: VZW-MEC-2026-5F8DB68B",
+      "Verification Code: 170E44AB86A0",
+      "Credential UUID: 7c8fd706-b823-4cd3-95ac-a98aa36a50d2",
+      "SHA-256 Fingerprint: 6F92E2A5BD21B75F17A1992308843508 06B19E469A3A2FEAA40468A8B988334A"
+    ]
+  },
+  {
+    "originalName": "VerifyZW_Certificate_025_Mechanics.pdf",
+    "tamperedName": "VerifyZW_Certificate_025_Mechanics_TAMPERED.pdf",
+    "paired": true,
+    "originalText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nVerifyZW Mechanics Student 025\nStudent Number: VZW-STU-025\nhas been awarded the qualification\nMechanics\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-MEC-2026-DDC74215\nVERIFYZW\nVerification Code: 8E0F0995B772\nTEST CREDENTIAL\nCredential UUID: 8ca74ddf-2435-427a-b18d-44dbc09d68ec\nSHA-256 Fingerprint: 59FA873289B791E049350405B27F2785 9F85583415E35DA9E19553A1382FA9A2\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "tamperedText": "VERIFYZW\nCERTIFICATE OF QUALIFICATION\nSYSTEM-GENERATED TEST CERTIFICATE\nThis is to certify that\nMechancs\nVerifyZWStudent 025\nStudent Number: VZW-STU-025\nhas been awarded the qualification\nMechanics\nIssued by VerifyZW Test Institution on 16 October 2026\nVERIFYZW SECURITY DATA\nCertificate Serial: VZW-MEC-2026-D7B3B699\nVERIFYZW\nVerification Code: B3565BA6FD2C\nTEST CREDENTIAL\nCredential UUID: 10a298b4-e064-45b0-a83d-39068fcbcd82\nSHA-256 Fingerprint: 5EDF139DC42953A1F17AA2C1091DE2E0 9A852AFEEE7C4C68399CEEB161E65DF4\nGenerated for VerifyZW testing. This document is for system/demo purposes.",
+    "removed": [
+      "VerifyZW Mechanics Student 025",
+      "Certificate Serial: VZW-MEC-2026-DDC74215",
+      "Verification Code: 8E0F0995B772",
+      "Credential UUID: 8ca74ddf-2435-427a-b18d-44dbc09d68ec",
+      "SHA-256 Fingerprint: 59FA873289B791E049350405B27F2785 9F85583415E35DA9E19553A1382FA9A2"
+    ],
+    "added": [
+      "Mechancs",
+      "VerifyZWStudent 025",
+      "Certificate Serial: VZW-MEC-2026-D7B3B699",
+      "Verification Code: B3565BA6FD2C",
+      "Credential UUID: 10a298b4-e064-45b0-a83d-39068fcbcd82",
+      "SHA-256 Fingerprint: 5EDF139DC42953A1F17AA2C1091DE2E0 9A852AFEEE7C4C68399CEEB161E65DF4"
+    ]
+  }
+]

@@ -1,0 +1,1250 @@
+{
+  "summary": {
+    "totalCases": 25,
+    "exactCases": 6,
+    "failedCases": 19,
+    "fieldLocalisationAccuracy": 24,
+    "exactSetAccuracy": 24,
+    "falsePositiveFields": 13
+  },
+  "results": [
+    {
+      "filename": "VerifyZW_Certificate_001_Biotechnology.pdf",
+      "tamperedFilename": "VerifyZW_Certificate_001_Biotechnology_TAMPERED.pdf",
+      "expected": "qualification",
+      "sourceField": "qualification",
+      "originalValue": "Biotechnology",
+      "tamperedValue": "Biotechnlogy",
+      "observed": [
+        "student_name"
+      ],
+      "fields": [
+        {
+          "field": "student_name",
+          "label": "Holder name",
+          "status": "ALTERED"
+        },
+        {
+          "field": "student_number",
+          "label": "Student / registration number",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "institution_name",
+          "label": "Institution",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "programme",
+          "label": "Programme",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "qualification",
+          "label": "Qualification",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "classification",
+          "label": "Degree classification",
+          "status": "NOT_AVAILABLE"
+        },
+        {
+          "field": "issue_date",
+          "label": "Issue date",
+          "status": "UNCHANGED"
+        }
+      ],
+      "semanticTamperingDetected": true,
+      "pass": false
+    },
+    {
+      "filename": "VerifyZW_Certificate_002_Biotechnology.pdf",
+      "tamperedFilename": "VerifyZW_Certificate_002_Biotechnology_TAMPERED.pdf",
+      "expected": "student_name",
+      "sourceField": "holder_name",
+      "originalValue": "VerifyZW Biotechnology Student 002",
+      "tamperedValue": "VerifyZW Biotechnology Studnt 002",
+      "observed": [],
+      "fields": [
+        {
+          "field": "student_name",
+          "label": "Holder name",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "student_number",
+          "label": "Student / registration number",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "institution_name",
+          "label": "Institution",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "programme",
+          "label": "Programme",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "qualification",
+          "label": "Qualification",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "classification",
+          "label": "Degree classification",
+          "status": "NOT_AVAILABLE"
+        },
+        {
+          "field": "issue_date",
+          "label": "Issue date",
+          "status": "UNCHANGED"
+        }
+      ],
+      "semanticTamperingDetected": false,
+      "pass": false
+    },
+    {
+      "filename": "VerifyZW_Certificate_003_Biotechnology.pdf",
+      "tamperedFilename": "VerifyZW_Certificate_003_Biotechnology_TAMPERED.pdf",
+      "expected": "student_number",
+      "sourceField": "student_number",
+      "originalValue": "VZW-STU-003",
+      "tamperedValue": "VZW-STU-004",
+      "observed": [
+        "student_number"
+      ],
+      "fields": [
+        {
+          "field": "student_name",
+          "label": "Holder name",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "student_number",
+          "label": "Student / registration number",
+          "status": "ALTERED"
+        },
+        {
+          "field": "institution_name",
+          "label": "Institution",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "programme",
+          "label": "Programme",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "qualification",
+          "label": "Qualification",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "classification",
+          "label": "Degree classification",
+          "status": "NOT_AVAILABLE"
+        },
+        {
+          "field": "issue_date",
+          "label": "Issue date",
+          "status": "UNCHANGED"
+        }
+      ],
+      "semanticTamperingDetected": true,
+      "pass": true
+    },
+    {
+      "filename": "VerifyZW_Certificate_004_Biotechnology.pdf",
+      "tamperedFilename": "VerifyZW_Certificate_004_Biotechnology_TAMPERED.pdf",
+      "expected": "qualification",
+      "sourceField": "qualification",
+      "originalValue": "Biotechnology",
+      "tamperedValue": "Biotechology",
+      "observed": [
+        "student_name"
+      ],
+      "fields": [
+        {
+          "field": "student_name",
+          "label": "Holder name",
+          "status": "ALTERED"
+        },
+        {
+          "field": "student_number",
+          "label": "Student / registration number",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "institution_name",
+          "label": "Institution",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "programme",
+          "label": "Programme",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "qualification",
+          "label": "Qualification",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "classification",
+          "label": "Degree classification",
+          "status": "NOT_AVAILABLE"
+        },
+        {
+          "field": "issue_date",
+          "label": "Issue date",
+          "status": "UNCHANGED"
+        }
+      ],
+      "semanticTamperingDetected": true,
+      "pass": false
+    },
+    {
+      "filename": "VerifyZW_Certificate_005_Biotechnology.pdf",
+      "tamperedFilename": "VerifyZW_Certificate_005_Biotechnology_TAMPERED.pdf",
+      "expected": "qualification",
+      "sourceField": "qualification",
+      "originalValue": "Biotechnology",
+      "tamperedValue": "Biotechnlogy",
+      "observed": [
+        "student_name"
+      ],
+      "fields": [
+        {
+          "field": "student_name",
+          "label": "Holder name",
+          "status": "ALTERED"
+        },
+        {
+          "field": "student_number",
+          "label": "Student / registration number",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "institution_name",
+          "label": "Institution",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "programme",
+          "label": "Programme",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "qualification",
+          "label": "Qualification",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "classification",
+          "label": "Degree classification",
+          "status": "NOT_AVAILABLE"
+        },
+        {
+          "field": "issue_date",
+          "label": "Issue date",
+          "status": "UNCHANGED"
+        }
+      ],
+      "semanticTamperingDetected": true,
+      "pass": false
+    },
+    {
+      "filename": "VerifyZW_Certificate_006_Biotechnology.pdf",
+      "tamperedFilename": "VerifyZW_Certificate_006_Biotechnology_TAMPERED.pdf",
+      "expected": "student_name",
+      "sourceField": "holder_name",
+      "originalValue": "VerifyZW Biotechnology Student 006",
+      "tamperedValue": "VerifyZW Biotechnology Studnt 006",
+      "observed": [],
+      "fields": [
+        {
+          "field": "student_name",
+          "label": "Holder name",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "student_number",
+          "label": "Student / registration number",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "institution_name",
+          "label": "Institution",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "programme",
+          "label": "Programme",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "qualification",
+          "label": "Qualification",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "classification",
+          "label": "Degree classification",
+          "status": "NOT_AVAILABLE"
+        },
+        {
+          "field": "issue_date",
+          "label": "Issue date",
+          "status": "UNCHANGED"
+        }
+      ],
+      "semanticTamperingDetected": false,
+      "pass": false
+    },
+    {
+      "filename": "VerifyZW_Certificate_007_Biotechnology.pdf",
+      "tamperedFilename": "VerifyZW_Certificate_007_Biotechnology_TAMPERED.pdf",
+      "expected": "student_number",
+      "sourceField": "student_number",
+      "originalValue": "VZW-STU-007",
+      "tamperedValue": "VZW-STU-008",
+      "observed": [
+        "student_number"
+      ],
+      "fields": [
+        {
+          "field": "student_name",
+          "label": "Holder name",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "student_number",
+          "label": "Student / registration number",
+          "status": "ALTERED"
+        },
+        {
+          "field": "institution_name",
+          "label": "Institution",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "programme",
+          "label": "Programme",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "qualification",
+          "label": "Qualification",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "classification",
+          "label": "Degree classification",
+          "status": "NOT_AVAILABLE"
+        },
+        {
+          "field": "issue_date",
+          "label": "Issue date",
+          "status": "UNCHANGED"
+        }
+      ],
+      "semanticTamperingDetected": true,
+      "pass": true
+    },
+    {
+      "filename": "VerifyZW_Certificate_008_Biotechnology.pdf",
+      "tamperedFilename": "VerifyZW_Certificate_008_Biotechnology_TAMPERED.pdf",
+      "expected": "qualification",
+      "sourceField": "qualification",
+      "originalValue": "Biotechnology",
+      "tamperedValue": "Biotechology",
+      "observed": [
+        "student_name"
+      ],
+      "fields": [
+        {
+          "field": "student_name",
+          "label": "Holder name",
+          "status": "ALTERED"
+        },
+        {
+          "field": "student_number",
+          "label": "Student / registration number",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "institution_name",
+          "label": "Institution",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "programme",
+          "label": "Programme",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "qualification",
+          "label": "Qualification",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "classification",
+          "label": "Degree classification",
+          "status": "NOT_AVAILABLE"
+        },
+        {
+          "field": "issue_date",
+          "label": "Issue date",
+          "status": "UNCHANGED"
+        }
+      ],
+      "semanticTamperingDetected": true,
+      "pass": false
+    },
+    {
+      "filename": "VerifyZW_Certificate_009_Biotechnology.pdf",
+      "tamperedFilename": "VerifyZW_Certificate_009_Biotechnology_TAMPERED.pdf",
+      "expected": "qualification",
+      "sourceField": "qualification",
+      "originalValue": "Biotechnology",
+      "tamperedValue": "Biotechnlogy",
+      "observed": [
+        "student_name"
+      ],
+      "fields": [
+        {
+          "field": "student_name",
+          "label": "Holder name",
+          "status": "ALTERED"
+        },
+        {
+          "field": "student_number",
+          "label": "Student / registration number",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "institution_name",
+          "label": "Institution",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "programme",
+          "label": "Programme",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "qualification",
+          "label": "Qualification",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "classification",
+          "label": "Degree classification",
+          "status": "NOT_AVAILABLE"
+        },
+        {
+          "field": "issue_date",
+          "label": "Issue date",
+          "status": "UNCHANGED"
+        }
+      ],
+      "semanticTamperingDetected": true,
+      "pass": false
+    },
+    {
+      "filename": "VerifyZW_Certificate_010_Biotechnology.pdf",
+      "tamperedFilename": "VerifyZW_Certificate_010_Biotechnology_TAMPERED.pdf",
+      "expected": "student_name",
+      "sourceField": "holder_name",
+      "originalValue": "VerifyZW Biotechnology Student 010",
+      "tamperedValue": "VerifyZW Biotechnology Studnt 010",
+      "observed": [],
+      "fields": [
+        {
+          "field": "student_name",
+          "label": "Holder name",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "student_number",
+          "label": "Student / registration number",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "institution_name",
+          "label": "Institution",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "programme",
+          "label": "Programme",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "qualification",
+          "label": "Qualification",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "classification",
+          "label": "Degree classification",
+          "status": "NOT_AVAILABLE"
+        },
+        {
+          "field": "issue_date",
+          "label": "Issue date",
+          "status": "UNCHANGED"
+        }
+      ],
+      "semanticTamperingDetected": false,
+      "pass": false
+    },
+    {
+      "filename": "VerifyZW_Certificate_011_Mechanics.pdf",
+      "tamperedFilename": "VerifyZW_Certificate_011_Mechanics_TAMPERED.pdf",
+      "expected": "student_number",
+      "sourceField": "student_number",
+      "originalValue": "VZW-STU-011",
+      "tamperedValue": "VZW-STU-012",
+      "observed": [
+        "student_number"
+      ],
+      "fields": [
+        {
+          "field": "student_name",
+          "label": "Holder name",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "student_number",
+          "label": "Student / registration number",
+          "status": "ALTERED"
+        },
+        {
+          "field": "institution_name",
+          "label": "Institution",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "programme",
+          "label": "Programme",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "qualification",
+          "label": "Qualification",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "classification",
+          "label": "Degree classification",
+          "status": "NOT_AVAILABLE"
+        },
+        {
+          "field": "issue_date",
+          "label": "Issue date",
+          "status": "UNCHANGED"
+        }
+      ],
+      "semanticTamperingDetected": true,
+      "pass": true
+    },
+    {
+      "filename": "VerifyZW_Certificate_012_Mechanics.pdf",
+      "tamperedFilename": "VerifyZW_Certificate_012_Mechanics_TAMPERED.pdf",
+      "expected": "qualification",
+      "sourceField": "qualification",
+      "originalValue": "Mechanics",
+      "tamperedValue": "Mechanlcs",
+      "observed": [
+        "student_name"
+      ],
+      "fields": [
+        {
+          "field": "student_name",
+          "label": "Holder name",
+          "status": "ALTERED"
+        },
+        {
+          "field": "student_number",
+          "label": "Student / registration number",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "institution_name",
+          "label": "Institution",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "programme",
+          "label": "Programme",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "qualification",
+          "label": "Qualification",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "classification",
+          "label": "Degree classification",
+          "status": "NOT_AVAILABLE"
+        },
+        {
+          "field": "issue_date",
+          "label": "Issue date",
+          "status": "UNCHANGED"
+        }
+      ],
+      "semanticTamperingDetected": true,
+      "pass": false
+    },
+    {
+      "filename": "VerifyZW_Certificate_013_Mechanics.pdf",
+      "tamperedFilename": "VerifyZW_Certificate_013_Mechanics_TAMPERED.pdf",
+      "expected": "qualification",
+      "sourceField": "qualification",
+      "originalValue": "Mechanics",
+      "tamperedValue": "Mechancs",
+      "observed": [
+        "student_name"
+      ],
+      "fields": [
+        {
+          "field": "student_name",
+          "label": "Holder name",
+          "status": "ALTERED"
+        },
+        {
+          "field": "student_number",
+          "label": "Student / registration number",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "institution_name",
+          "label": "Institution",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "programme",
+          "label": "Programme",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "qualification",
+          "label": "Qualification",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "classification",
+          "label": "Degree classification",
+          "status": "NOT_AVAILABLE"
+        },
+        {
+          "field": "issue_date",
+          "label": "Issue date",
+          "status": "UNCHANGED"
+        }
+      ],
+      "semanticTamperingDetected": true,
+      "pass": false
+    },
+    {
+      "filename": "VerifyZW_Certificate_014_Mechanics.pdf",
+      "tamperedFilename": "VerifyZW_Certificate_014_Mechanics_TAMPERED.pdf",
+      "expected": "student_name",
+      "sourceField": "holder_name",
+      "originalValue": "VerifyZW Mechanics Student 014",
+      "tamperedValue": "VerifyZW Mechanics Studnt 014",
+      "observed": [],
+      "fields": [
+        {
+          "field": "student_name",
+          "label": "Holder name",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "student_number",
+          "label": "Student / registration number",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "institution_name",
+          "label": "Institution",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "programme",
+          "label": "Programme",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "qualification",
+          "label": "Qualification",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "classification",
+          "label": "Degree classification",
+          "status": "NOT_AVAILABLE"
+        },
+        {
+          "field": "issue_date",
+          "label": "Issue date",
+          "status": "UNCHANGED"
+        }
+      ],
+      "semanticTamperingDetected": false,
+      "pass": false
+    },
+    {
+      "filename": "VerifyZW_Certificate_015_Mechanics.pdf",
+      "tamperedFilename": "VerifyZW_Certificate_015_Mechanics_TAMPERED.pdf",
+      "expected": "student_number",
+      "sourceField": "student_number",
+      "originalValue": "VZW-STU-015",
+      "tamperedValue": "VZW-STU-016",
+      "observed": [
+        "student_number"
+      ],
+      "fields": [
+        {
+          "field": "student_name",
+          "label": "Holder name",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "student_number",
+          "label": "Student / registration number",
+          "status": "ALTERED"
+        },
+        {
+          "field": "institution_name",
+          "label": "Institution",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "programme",
+          "label": "Programme",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "qualification",
+          "label": "Qualification",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "classification",
+          "label": "Degree classification",
+          "status": "NOT_AVAILABLE"
+        },
+        {
+          "field": "issue_date",
+          "label": "Issue date",
+          "status": "UNCHANGED"
+        }
+      ],
+      "semanticTamperingDetected": true,
+      "pass": true
+    },
+    {
+      "filename": "VerifyZW_Certificate_016_Mechanics.pdf",
+      "tamperedFilename": "VerifyZW_Certificate_016_Mechanics_TAMPERED.pdf",
+      "expected": "qualification",
+      "sourceField": "qualification",
+      "originalValue": "Mechanics",
+      "tamperedValue": "Mechanlcs",
+      "observed": [
+        "student_name"
+      ],
+      "fields": [
+        {
+          "field": "student_name",
+          "label": "Holder name",
+          "status": "ALTERED"
+        },
+        {
+          "field": "student_number",
+          "label": "Student / registration number",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "institution_name",
+          "label": "Institution",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "programme",
+          "label": "Programme",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "qualification",
+          "label": "Qualification",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "classification",
+          "label": "Degree classification",
+          "status": "NOT_AVAILABLE"
+        },
+        {
+          "field": "issue_date",
+          "label": "Issue date",
+          "status": "UNCHANGED"
+        }
+      ],
+      "semanticTamperingDetected": true,
+      "pass": false
+    },
+    {
+      "filename": "VerifyZW_Certificate_017_Mechanics.pdf",
+      "tamperedFilename": "VerifyZW_Certificate_017_Mechanics_TAMPERED.pdf",
+      "expected": "qualification",
+      "sourceField": "qualification",
+      "originalValue": "Mechanics",
+      "tamperedValue": "Mechancs",
+      "observed": [
+        "student_name"
+      ],
+      "fields": [
+        {
+          "field": "student_name",
+          "label": "Holder name",
+          "status": "ALTERED"
+        },
+        {
+          "field": "student_number",
+          "label": "Student / registration number",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "institution_name",
+          "label": "Institution",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "programme",
+          "label": "Programme",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "qualification",
+          "label": "Qualification",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "classification",
+          "label": "Degree classification",
+          "status": "NOT_AVAILABLE"
+        },
+        {
+          "field": "issue_date",
+          "label": "Issue date",
+          "status": "UNCHANGED"
+        }
+      ],
+      "semanticTamperingDetected": true,
+      "pass": false
+    },
+    {
+      "filename": "VerifyZW_Certificate_018_Mechanics.pdf",
+      "tamperedFilename": "VerifyZW_Certificate_018_Mechanics_TAMPERED.pdf",
+      "expected": "student_name",
+      "sourceField": "holder_name",
+      "originalValue": "VerifyZW Mechanics Student 018",
+      "tamperedValue": "VerifyZW Mechanics Studnt 018",
+      "observed": [],
+      "fields": [
+        {
+          "field": "student_name",
+          "label": "Holder name",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "student_number",
+          "label": "Student / registration number",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "institution_name",
+          "label": "Institution",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "programme",
+          "label": "Programme",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "qualification",
+          "label": "Qualification",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "classification",
+          "label": "Degree classification",
+          "status": "NOT_AVAILABLE"
+        },
+        {
+          "field": "issue_date",
+          "label": "Issue date",
+          "status": "UNCHANGED"
+        }
+      ],
+      "semanticTamperingDetected": false,
+      "pass": false
+    },
+    {
+      "filename": "VerifyZW_Certificate_019_Mechanics.pdf",
+      "tamperedFilename": "VerifyZW_Certificate_019_Mechanics_TAMPERED.pdf",
+      "expected": "student_number",
+      "sourceField": "student_number",
+      "originalValue": "VZW-STU-019",
+      "tamperedValue": "VZW-STU-010",
+      "observed": [
+        "student_number"
+      ],
+      "fields": [
+        {
+          "field": "student_name",
+          "label": "Holder name",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "student_number",
+          "label": "Student / registration number",
+          "status": "ALTERED"
+        },
+        {
+          "field": "institution_name",
+          "label": "Institution",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "programme",
+          "label": "Programme",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "qualification",
+          "label": "Qualification",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "classification",
+          "label": "Degree classification",
+          "status": "NOT_AVAILABLE"
+        },
+        {
+          "field": "issue_date",
+          "label": "Issue date",
+          "status": "UNCHANGED"
+        }
+      ],
+      "semanticTamperingDetected": true,
+      "pass": true
+    },
+    {
+      "filename": "VerifyZW_Certificate_020_Mechanics.pdf",
+      "tamperedFilename": "VerifyZW_Certificate_020_Mechanics_TAMPERED.pdf",
+      "expected": "qualification",
+      "sourceField": "qualification",
+      "originalValue": "Mechanics",
+      "tamperedValue": "Mechanlcs",
+      "observed": [
+        "student_name"
+      ],
+      "fields": [
+        {
+          "field": "student_name",
+          "label": "Holder name",
+          "status": "ALTERED"
+        },
+        {
+          "field": "student_number",
+          "label": "Student / registration number",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "institution_name",
+          "label": "Institution",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "programme",
+          "label": "Programme",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "qualification",
+          "label": "Qualification",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "classification",
+          "label": "Degree classification",
+          "status": "NOT_AVAILABLE"
+        },
+        {
+          "field": "issue_date",
+          "label": "Issue date",
+          "status": "UNCHANGED"
+        }
+      ],
+      "semanticTamperingDetected": true,
+      "pass": false
+    },
+    {
+      "filename": "VerifyZW_Certificate_021_Mechanics.pdf",
+      "tamperedFilename": "VerifyZW_Certificate_021_Mechanics_TAMPERED.pdf",
+      "expected": "qualification",
+      "sourceField": "qualification",
+      "originalValue": "Mechanics",
+      "tamperedValue": "Mechancs",
+      "observed": [
+        "student_name"
+      ],
+      "fields": [
+        {
+          "field": "student_name",
+          "label": "Holder name",
+          "status": "ALTERED"
+        },
+        {
+          "field": "student_number",
+          "label": "Student / registration number",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "institution_name",
+          "label": "Institution",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "programme",
+          "label": "Programme",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "qualification",
+          "label": "Qualification",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "classification",
+          "label": "Degree classification",
+          "status": "NOT_AVAILABLE"
+        },
+        {
+          "field": "issue_date",
+          "label": "Issue date",
+          "status": "UNCHANGED"
+        }
+      ],
+      "semanticTamperingDetected": true,
+      "pass": false
+    },
+    {
+      "filename": "VerifyZW_Certificate_022_Mechanics.pdf",
+      "tamperedFilename": "VerifyZW_Certificate_022_Mechanics_TAMPERED.pdf",
+      "expected": "student_name",
+      "sourceField": "holder_name",
+      "originalValue": "VerifyZW Mechanics Student 022",
+      "tamperedValue": "VerifyZW Mechanics Studnt 022",
+      "observed": [],
+      "fields": [
+        {
+          "field": "student_name",
+          "label": "Holder name",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "student_number",
+          "label": "Student / registration number",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "institution_name",
+          "label": "Institution",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "programme",
+          "label": "Programme",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "qualification",
+          "label": "Qualification",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "classification",
+          "label": "Degree classification",
+          "status": "NOT_AVAILABLE"
+        },
+        {
+          "field": "issue_date",
+          "label": "Issue date",
+          "status": "UNCHANGED"
+        }
+      ],
+      "semanticTamperingDetected": false,
+      "pass": false
+    },
+    {
+      "filename": "VerifyZW_Certificate_023_Mechanics.pdf",
+      "tamperedFilename": "VerifyZW_Certificate_023_Mechanics_TAMPERED.pdf",
+      "expected": "student_number",
+      "sourceField": "student_number",
+      "originalValue": "VZW-STU-023",
+      "tamperedValue": "VZW-STU-024",
+      "observed": [
+        "student_number"
+      ],
+      "fields": [
+        {
+          "field": "student_name",
+          "label": "Holder name",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "student_number",
+          "label": "Student / registration number",
+          "status": "ALTERED"
+        },
+        {
+          "field": "institution_name",
+          "label": "Institution",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "programme",
+          "label": "Programme",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "qualification",
+          "label": "Qualification",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "classification",
+          "label": "Degree classification",
+          "status": "NOT_AVAILABLE"
+        },
+        {
+          "field": "issue_date",
+          "label": "Issue date",
+          "status": "UNCHANGED"
+        }
+      ],
+      "semanticTamperingDetected": true,
+      "pass": true
+    },
+    {
+      "filename": "VerifyZW_Certificate_024_Mechanics.pdf",
+      "tamperedFilename": "VerifyZW_Certificate_024_Mechanics_TAMPERED.pdf",
+      "expected": "qualification",
+      "sourceField": "qualification",
+      "originalValue": "Mechanics",
+      "tamperedValue": "Mechanlcs",
+      "observed": [
+        "student_name"
+      ],
+      "fields": [
+        {
+          "field": "student_name",
+          "label": "Holder name",
+          "status": "ALTERED"
+        },
+        {
+          "field": "student_number",
+          "label": "Student / registration number",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "institution_name",
+          "label": "Institution",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "programme",
+          "label": "Programme",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "qualification",
+          "label": "Qualification",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "classification",
+          "label": "Degree classification",
+          "status": "NOT_AVAILABLE"
+        },
+        {
+          "field": "issue_date",
+          "label": "Issue date",
+          "status": "UNCHANGED"
+        }
+      ],
+      "semanticTamperingDetected": true,
+      "pass": false
+    },
+    {
+      "filename": "VerifyZW_Certificate_025_Mechanics.pdf",
+      "tamperedFilename": "VerifyZW_Certificate_025_Mechanics_TAMPERED.pdf",
+      "expected": "qualification",
+      "sourceField": "qualification",
+      "originalValue": "Mechanics",
+      "tamperedValue": "Mechancs",
+      "observed": [
+        "student_name"
+      ],
+      "fields": [
+        {
+          "field": "student_name",
+          "label": "Holder name",
+          "status": "ALTERED"
+        },
+        {
+          "field": "student_number",
+          "label": "Student / registration number",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "institution_name",
+          "label": "Institution",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "programme",
+          "label": "Programme",
+          "status": "NOT_ASSESSABLE"
+        },
+        {
+          "field": "qualification",
+          "label": "Qualification",
+          "status": "UNCHANGED"
+        },
+        {
+          "field": "classification",
+          "label": "Degree classification",
+          "status": "NOT_AVAILABLE"
+        },
+        {
+          "field": "issue_date",
+          "label": "Issue date",
+          "status": "UNCHANGED"
+        }
+      ],
+      "semanticTamperingDetected": true,
+      "pass": false
+    }
+  ]
+}

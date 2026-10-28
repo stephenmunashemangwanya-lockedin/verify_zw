@@ -1,0 +1,2530 @@
+===== HEAD =====
+6650ef4e3a36a12a248f14ca050ca7f8e5cbed79
+
+===== WORKING TREE =====
+ M frontend/src/pages/Management.tsx
+?? _bmad-output/implementation-artifacts/spec-semantic-pdf-localisation.md
+?? _bmad-output/planning-artifacts/prds/prd-Zimbabwe-Skill-Verification-Platform-2026-10-02/
+?? backend/controllers/credentialController.js.bak
+?? backend/controllers/credentialController.js.before-status-list
+?? backend/services/tamperAnalysisService.pre-spatial-v2.js
+?? docs/semantic-manifest-integration-plan.md
+?? frontend/vitest.config.ts
+?? lazy-route-investigation-run-1.log
+?? lazy-route-investigation-run-2.log
+?? lazy-route-investigation-run-3.log
+?? manifest-baseline-tests.log
+?? "on `"
+?? scripts/diagnostics/
+?? scripts/evaluation/revalidate_paired_statistics.py
+?? semantic-backend.log
+?? semantic-frontend-lazy-retry.log
+?? semantic-frontend-public-final.log
+?? semantic-frontend.log
+?? semantic-layout-diagnostic.txt
+?? semantic-localisation-review.diff
+?? semantic-manifest-final-inspection.txt
+?? semantic-real-corpus-current-results.json
+?? semantic-real-corpus-diagnostic.json
+?? semantic-targeted.log
+?? "t \357\200\242`n===== CONFIG =====\357\200\242"
+?? "tstructuredCredentialVerification.test.js `"
+?? "t\357\200\272docker"
+
+===== MIGRATION LOCATIONS =====
+
+FullName                                                                                                                            
+--------                                                                                                                            
+C:\Users\HYDRA\Desktop\Zimbabwe-Skill-Verification-Platform\backend\database\migrations\000_initial_schema.sql                      
+C:\Users\HYDRA\Desktop\Zimbabwe-Skill-Verification-Platform\backend\database\migrations\001_extend_credential_verification_audit.sql
+C:\Users\HYDRA\Desktop\Zimbabwe-Skill-Verification-Platform\backend\database\migrations\002_public_verification_support.sql         
+C:\Users\HYDRA\Desktop\Zimbabwe-Skill-Verification-Platform\backend\database\migrations\003_audit_scope_and_user_security.sql       
+C:\Users\HYDRA\Desktop\Zimbabwe-Skill-Verification-Platform\backend\database\migrations\004_user_password_reset_security.sql        
+C:\Users\HYDRA\Desktop\Zimbabwe-Skill-Verification-Platform\backend\database\migrations\005_listing_performance_indexes.sql         
+C:\Users\HYDRA\Desktop\Zimbabwe-Skill-Verification-Platform\backend\database\migrations\006_dashboard_analytics_indexes.sql         
+C:\Users\HYDRA\Desktop\Zimbabwe-Skill-Verification-Platform\backend\database\migrations\007_student_account_ownership.sql           
+C:\Users\HYDRA\Desktop\Zimbabwe-Skill-Verification-Platform\backend\database\migrations\008_research_trust_lifecycle.sql            
+C:\Users\HYDRA\Desktop\Zimbabwe-Skill-Verification-Platform\backend\database\migrations\009_verification_trust_results.sql          
+C:\Users\HYDRA\Desktop\Zimbabwe-Skill-Verification-Platform\backend\database\migrations\010_structured_credential_proof.sql         
+C:\Users\HYDRA\Desktop\Zimbabwe-Skill-Verification-Platform\backend\database\migrations\011_signed_status_lists.sql                 
+C:\Users\HYDRA\Desktop\Zimbabwe-Skill-Verification-Platform\backend\database\migrations\012_regulator_role.sql                      
+
+
+
+
+===== MIGRATION RUNNER =====
+const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
+require("dotenv").config({ quiet: true });
+
+const migrationsDirectory = path.join(__dirname, "migrations");
+const CORE_TABLES = ["institutions", "users", "students", "credentials", "verification_logs", "audit_logs"];
+const DESTRUCTIVE_SQL = /\b(DROP\s+(?:TABLE|SCHEMA|DATABASE)|TRUNCATE|DELETE\s+FROM)\b/i;
+const checksum = (sql) => crypto.createHash("sha256").update(sql).digest("hex");
+const migrationFiles = (directory = migrationsDirectory) => fs.readdirSync(directory).filter((name) => /^\d{3}_[A-Za-z0-9_.-]+\.sql$/.test(name)).sort((a, b) => a.localeCompare(b));
+const transactionalBody = (sql) => sql.replace(/^\s*BEGIN;\s*/i, "").replace(/\s*COMMIT;\s*$/i, "");
+const assertSafeInitialSchema = (sql) => { if (DESTRUCTIVE_SQL.test(sql)) throw new Error("Initial schema contains destructive SQL."); if (!/CREATE\s+EXTENSION\s+IF\s+NOT\s+EXISTS\s+"?pgcrypto"?/i.test(sql)) throw new Error("Initial schema must create pgcrypto."); for (const table of CORE_TABLES) if (!new RegExp(`CREATE\\s+TABLE\\s+IF\\s+NOT\\s+EXISTS\\s+${table}\\b`, "i").test(sql)) throw new Error(`Initial schema is missing ${table}.`); };
+
+const inspectCoreSchema = async (client) => {
+  const result = await client.query("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name = ANY($1::text[])", [CORE_TABLES]);
+  const present = new Set(result.rows.map((row) => row.table_name));
+  if (present.size > 0 && present.size < CORE_TABLES.length) throw Object.assign(new Error("Partial core schema detected; migration stopped without changes."), { code: "PARTIAL_SCHEMA" });
+  if (present.size === 0) {
+    const other = await client.query("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name <> 'schema_migrations'");
+    if (other.rowCount) throw Object.assign(new Error("Database is not empty; refusing initial bootstrap."), { code: "NONEMPTY_UNKNOWN_SCHEMA" });
+  }
+  return present.size === CORE_TABLES.length ? "complete" : "empty";
+};
+
+const runMigrations = async ({ pool, directory = migrationsDirectory, logger = console } = {}) => {
+  if (!pool) pool = require("../config/database");
+  const client = await pool.connect(); const appliedNow = []; const adopted = [];
+  try {
+    await client.query(`CREATE TABLE IF NOT EXISTS schema_migrations (
+      id BIGSERIAL PRIMARY KEY, migration_name VARCHAR(255) UNIQUE NOT NULL,
+      checksum VARCHAR(64) NOT NULL, applied_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      execution_ms INTEGER NOT NULL
+    )`);
+    const state = await inspectCoreSchema(client); const files = migrationFiles(directory);
+    for (const fileName of files) {
+      const sql = fs.readFileSync(path.join(directory, fileName), "utf8"); const digest = checksum(sql);
+      const prior = await client.query("SELECT checksum FROM schema_migrations WHERE migration_name=$1", [fileName]);
+      if (prior.rowCount) { if (prior.rows[0].checksum !== digest) throw Object.assign(new Error(`Applied migration checksum mismatch: ${fileName}`), { code: "MIGRATION_CHECKSUM_MISMATCH" }); continue; }
+      if (fileName === "000_initial_schema.sql") {
+        assertSafeInitialSchema(sql);
+        if (state === "complete") { await client.query("INSERT INTO schema_migrations(migration_name,checksum,execution_ms) VALUES($1,$2,0)", [fileName, digest]); adopted.push(fileName); continue; }
+      }
+      const started = Date.now(); await client.query("BEGIN");
+      try { await client.query(transactionalBody(sql)); await client.query("INSERT INTO schema_migrations(migration_name,checksum,execution_ms) VALUES($1,$2,$3)", [fileName, digest, Date.now() - started]); await client.query("COMMIT"); appliedNow.push(fileName); }
+      catch (error) { await client.query("ROLLBACK").catch(() => {}); throw error; }
+    }
+    logger.log(JSON.stringify({ applied: appliedNow, adopted, skipped: files.length - appliedNow.length - adopted.length }));
+    return { applied: appliedNow, adopted, skipped: files.length - appliedNow.length - adopted.length };
+  } finally { client.release(); }
+};
+
+if (require.main === module) { const pool = require("../config/database"); runMigrations({ pool }).catch((error) => { console.error("Database migration failed:", error.code || error.message); process.exitCode = 1; }).finally(() => pool.end()); }
+module.exports = { runMigrations, migrationFiles, checksum, transactionalBody, assertSafeInitialSchema, inspectCoreSchema, CORE_TABLES };
+
+===== CREDENTIAL MODEL EXPORTS / REMAINDER =====
+        [
+          id,
+          blockchainResult
+            .transactionHash,
+          blockchainResult
+            .network,
+          blockchainResult
+            .contractAddress,
+          blockchainResult
+            .blockNumber,
+        ]
+      );
+
+    return result.rows[0];
+  };
+
+const markCredentialRevoked =
+  async (
+    id,
+    {
+      revokedBy,
+      reason,
+      transactionHash,
+    }
+  ) => {
+    const result =
+      await pool.query(
+        `UPDATE credentials
+         SET
+           status = 'revoked',
+           revoked_by = $2,
+           revocation_reason = $3,
+           revocation_tx = $4,
+           revoked_at = CURRENT_TIMESTAMP,
+           processing_error = NULL,
+           updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1
+           AND status = 'active'
+         RETURNING
+           id,
+           student_id,
+           institution_id,
+           qualification,
+           issue_date,
+           award_date,
+           certificate_hash,
+           credential_commitment,
+           issuer_wallet,
+           proof_version,
+           status_list_index,
+           ipfs_cid,
+           blockchain_tx,
+           blockchain_network,
+           contract_address,
+           block_number,
+           status,
+           public_token,
+           qr_code_path,
+           created_by,
+           revoked_by,
+           revocation_reason,
+           revocation_tx,
+           revoked_at,
+           superseded_by,
+           superseded_at,
+           supersession_reason,
+           created_at,
+           updated_at`,
+        [
+          id,
+          revokedBy,
+          reason,
+          transactionHash,
+        ]
+      );
+
+    return result.rows[0];
+  };
+
+const markCredentialSuperseded =
+  async (
+    id,
+    {
+      replacementCredentialId,
+      reason,
+    }
+  ) => {
+    const result =
+      await pool.query(
+        `UPDATE credentials
+         SET
+           status = 'superseded',
+           superseded_by = $2,
+           superseded_at = CURRENT_TIMESTAMP,
+           supersession_reason = $3,
+           processing_error = NULL,
+           updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1
+           AND status = 'active'
+           AND superseded_by IS NULL
+         RETURNING
+           id,
+           student_id,
+           institution_id,
+           qualification,
+           issue_date,
+           award_date,
+           certificate_hash,
+           credential_commitment,
+           issuer_wallet,
+           proof_version,
+           status_list_index,
+           ipfs_cid,
+           blockchain_tx,
+           blockchain_network,
+           contract_address,
+           block_number,
+           status,
+           public_token,
+           qr_code_path,
+           superseded_by,
+           superseded_at,
+           supersession_reason,
+           created_by,
+           created_at,
+           updated_at`,
+        [
+          id,
+          replacementCredentialId,
+          reason,
+        ]
+      );
+
+    return result.rows[0];
+  };
+
+const updateCredentialQrCodePath =
+  async (
+    id,
+    qrCodePath
+  ) => {
+    const result =
+      await pool.query(
+        `UPDATE credentials
+         SET
+           qr_code_path = $2,
+           updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1
+           AND public_token IS NOT NULL
+         RETURNING
+           id,
+           public_token,
+           qr_code_path,
+           status,
+           updated_at`,
+        [
+          id,
+          qrCodePath,
+        ]
+      );
+
+    return result.rows[0];
+  };
+
+const getCredentialsRequiringReconciliation =
+  async () => {
+    const result =
+      await pool.query(
+        `SELECT
+           id,
+           certificate_hash,
+           credential_commitment,
+           proof_version,
+           issuer_wallet,
+           ipfs_cid,
+           status,
+           blockchain_tx
+         FROM credentials
+         WHERE ipfs_cid IS NOT NULL
+           AND status IN (
+             'processing',
+             'pending',
+             'failed'
+           )
+         ORDER BY updated_at ASC`
+      );
+
+    return result.rows;
+  };
+
+const getCredentialById =
+  async (id) => {
+    const result =
+      await pool.query(
+        `SELECT
+           credentials.id,
+           credentials.student_id,
+           credentials.institution_id,
+           credentials.qualification,
+           credentials.issue_date,
+           credentials.award_date,
+           credentials.certificate_hash,
+           credentials.credential_payload,
+           credentials.credential_commitment,
+           credentials.issuer_signature,
+           credentials.issuer_wallet,
+           credentials.proof_type,
+           credentials.proof_canonicalisation,
+           credentials.proof_hash_algorithm,
+           credentials.proof_version,
+           credentials.status_list_index,
+           credentials.ipfs_cid,
+           credentials.blockchain_tx,
+           credentials.blockchain_network,
+           credentials.contract_address,
+           credentials.block_number,
+           credentials.public_token,
+           credentials.qr_code_path,
+           credentials.revocation_reason,
+           credentials.revoked_at,
+           credentials.superseded_by,
+           credentials.superseded_at,
+           credentials.supersession_reason,
+           superseded_original.id AS supersedes_credential_id,
+           credentials.status,
+           credentials.created_at,
+           credentials.updated_at,
+
+           students.student_number,
+           students.full_name AS student_name,
+           students.programme,
+
+           institutions.name AS institution_name,
+           institutions.wallet_address AS institution_wallet
+
+         FROM credentials
+
+         INNER JOIN students
+           ON credentials.student_id =
+              students.id
+
+         INNER JOIN institutions
+           ON credentials.institution_id =
+              institutions.id
+
+         LEFT JOIN credentials AS superseded_original
+           ON superseded_original.superseded_by = credentials.id
+
+         WHERE credentials.id = $1
+         LIMIT 1`,
+        [
+          id,
+        ]
+      );
+
+    return result.rows[0];
+  };
+
+const listCredentials =
+  async ({
+    institutionId = null,
+    studentId = null,
+    search = null,
+    status = null,
+    issueDateFrom = null,
+    issueDateTo = null,
+    awardDateFrom = null,
+    awardDateTo = null,
+    limit = 20,
+    offset = 0,
+    sortBy = "created_at",
+    sortOrder = "DESC",
+  } = {}) => {
+    const fields = {
+      issue_date:
+        "credentials.issue_date",
+
+      award_date:
+        "credentials.award_date",
+
+      qualification:
+        "credentials.qualification",
+
+      status:
+        "credentials.status",
+
+      created_at:
+        "credentials.created_at",
+
+      updated_at:
+        "credentials.updated_at",
+    };
+
+    const column =
+      fields[sortBy] ||
+      fields.created_at;
+
+    const order =
+      sortOrder === "ASC"
+        ? "ASC"
+        : "DESC";
+
+    const values = [];
+    const where = [];
+
+    const add = (
+      condition,
+      value
+    ) => {
+      values.push(
+        value
+      );
+
+      where.push(
+        condition.replace(
+          "?",
+          `$${values.length}`
+        )
+      );
+    };
+
+    if (institutionId) {
+      add(
+        "credentials.institution_id = ?",
+        institutionId
+      );
+    }
+
+    if (studentId) {
+      add(
+        "credentials.student_id = ?",
+        studentId
+      );
+    }
+
+    if (status) {
+      add(
+        "credentials.status = ?",
+        status
+      );
+    }
+
+    if (issueDateFrom) {
+      add(
+        "credentials.issue_date >= ?",
+        issueDateFrom
+      );
+    }
+
+    if (issueDateTo) {
+      add(
+        "credentials.issue_date <= ?",
+        issueDateTo
+      );
+    }
+
+    if (awardDateFrom) {
+      add(
+        "credentials.award_date >= ?",
+        awardDateFrom
+      );
+    }
+
+    if (awardDateTo) {
+      add(
+        "credentials.award_date <= ?",
+        awardDateTo
+      );
+    }
+
+    if (search) {
+      values.push(
+        search
+      );
+
+      const parameter =
+        `$${values.length}`;
+
+      where.push(
+        `(credentials.qualification ILIKE ${parameter} ESCAPE '\\'
+          OR students.full_name ILIKE ${parameter} ESCAPE '\\'
+          OR students.student_number ILIKE ${parameter} ESCAPE '\\'
+          OR institutions.name ILIKE ${parameter} ESCAPE '\\'
+          OR LOWER(credentials.certificate_hash) =
+             LOWER(REPLACE(${parameter}, '%', ''))
+          OR LOWER(COALESCE(credentials.credential_commitment, '')) =
+             LOWER(REPLACE(${parameter}, '%', '')))`
+      );
+    }
+
+    const clause =
+      where.length
+        ? `WHERE ${where.join(
+            " AND "
+          )}`
+        : "";
+
+    const joins = `
+      FROM credentials
+
+      INNER JOIN students
+        ON credentials.student_id =
+           students.id
+
+      INNER JOIN institutions
+        ON credentials.institution_id =
+           institutions.id
+    `;
+
+    const count =
+      await pool.query(
+        `SELECT
+           COUNT(*)::int AS total
+         ${joins}
+         ${clause}`,
+        values
+      );
+
+    const resultValues = [
+      ...values,
+      limit,
+      offset,
+    ];
+
+    const result =
+      await pool.query(
+        `SELECT
+           credentials.id,
+           credentials.student_id,
+           credentials.institution_id,
+           credentials.qualification,
+           credentials.issue_date,
+           credentials.award_date,
+           credentials.certificate_hash,
+           credentials.credential_commitment,
+           credentials.proof_version,
+           credentials.status_list_index,
+           credentials.ipfs_cid,
+           credentials.blockchain_tx,
+           credentials.status,
+           credentials.superseded_by,
+           credentials.superseded_at,
+           credentials.supersession_reason,
+           credentials.created_at,
+           credentials.updated_at,
+
+           students.student_number,
+           students.full_name AS student_name,
+           students.programme,
+
+           institutions.name AS institution_name
+
+         ${joins}
+         ${clause}
+
+         ORDER BY
+           ${column} ${order},
+           credentials.id ASC
+
+         LIMIT $${resultValues.length - 1}
+         OFFSET $${resultValues.length}`,
+        resultValues
+      );
+
+    return {
+      rows:
+        result.rows,
+
+      total:
+        count.rows[0]
+          .total,
+    };
+  };
+
+const getAllCredentials =
+  (
+    options = {}
+  ) =>
+    listCredentials(
+      options
+    );
+
+const getCredentialsByInstitution =
+  (
+    institutionId,
+    options = {}
+  ) =>
+    listCredentials({
+      ...options,
+      institutionId,
+    });
+
+const getCredentialsByStudent =
+  (
+    studentId,
+    options = {}
+  ) =>
+    listCredentials({
+      ...options,
+      studentId,
+    });
+
+const findCredentialByHash =
+  async (
+    certificateHash
+  ) => {
+    const result =
+      await pool.query(
+        `SELECT
+           credentials.id,
+           credentials.student_id,
+           credentials.institution_id,
+           credentials.qualification,
+           credentials.issue_date,
+           credentials.award_date,
+           credentials.certificate_hash,
+           credentials.credential_payload,
+           credentials.credential_commitment,
+           credentials.issuer_signature,
+           credentials.issuer_wallet,
+           credentials.proof_type,
+           credentials.proof_canonicalisation,
+           credentials.proof_hash_algorithm,
+           credentials.proof_version,
+           credentials.status_list_index,
+           credentials.ipfs_cid,
+           credentials.blockchain_tx,
+           credentials.blockchain_network,
+           credentials.contract_address,
+           credentials.block_number,
+           credentials.status,
+           credentials.superseded_by,
+           credentials.superseded_at,
+           credentials.supersession_reason,
+           credentials.created_at,
+
+           students.student_number,
+           students.full_name AS student_name,
+           students.programme,
+
+           institutions.name AS institution_name,
+           institutions.wallet_address AS institution_wallet
+
+         FROM credentials
+
+         INNER JOIN students
+           ON credentials.student_id =
+              students.id
+
+         INNER JOIN institutions
+           ON credentials.institution_id =
+              institutions.id
+
+         WHERE credentials.certificate_hash = $1
+         LIMIT 1`,
+        [
+          certificateHash,
+        ]
+      );
+
+    return result.rows[0];
+  };
+
+module.exports = {
+  createCredential,
+  createProcessingCredential,
+  setCredentialStructuredProof,
+  updateCredentialIpfsData,
+  markCredentialFailed,
+  activateCredential,
+  markCredentialRevoked,
+  markCredentialSuperseded,
+  updateCredentialQrCodePath,
+  getCredentialsRequiringReconciliation,
+  getCredentialById,
+  getAllCredentials,
+  getCredentialsByInstitution,
+  getCredentialsByStudent,
+  listCredentials,
+  findCredentialByHash,
+};
+
+===== VERIFICATION MODEL =====
+const pool =
+  require(
+    "../config/database"
+  );
+
+const publicCredentialSelect = `
+  SELECT
+    credentials.id,
+    credentials.student_id,
+    credentials.institution_id,
+    credentials.certificate_hash,
+    credentials.credential_payload,
+    credentials.credential_commitment,
+    credentials.issuer_signature,
+    credentials.issuer_wallet,
+    credentials.proof_type,
+    credentials.proof_canonicalisation,
+    credentials.proof_hash_algorithm,
+    credentials.proof_version,
+    credentials.status_list_index,
+    credentials.qualification,
+    credentials.issue_date,
+    credentials.award_date,
+    credentials.ipfs_cid,
+    credentials.blockchain_tx,
+    credentials.blockchain_network,
+    credentials.contract_address,
+    credentials.block_number,
+    credentials.status,
+    credentials.public_token,
+    credentials.revoked_at,
+    credentials.revocation_reason,
+    credentials.superseded_by,
+    credentials.superseded_at,
+    credentials.supersession_reason,
+
+    students.student_number,
+    students.full_name AS student_name,
+    students.programme,
+
+    institutions.name AS institution_name,
+    institutions.wallet_address AS institution_wallet
+
+  FROM credentials
+
+  INNER JOIN students
+    ON students.id =
+       credentials.student_id
+
+  INNER JOIN institutions
+    ON institutions.id =
+       credentials.institution_id
+`;
+
+const findOne = async (
+  whereClause,
+  value
+) => {
+  const result =
+    await pool.query(
+      `${publicCredentialSelect}
+       WHERE ${whereClause} = $1
+       LIMIT 1`,
+      [
+        value,
+      ]
+    );
+
+  return result.rows[0];
+};
+
+const findCredentialByHashForVerification =
+  (hash) =>
+    findOne(
+      "credentials.certificate_hash",
+      hash
+    );
+
+const findCredentialByIdForVerification =
+  (id) =>
+    findOne(
+      "credentials.id",
+      id
+    );
+
+const findCredentialByPublicToken =
+  (token) =>
+    findOne(
+      "credentials.public_token",
+      token
+    );
+
+const createVerificationLog =
+  async ({
+    credentialId,
+    verifierName,
+    verifierEmail,
+    resultCode,
+    verificationMethod,
+    uploadedHash,
+    ipAddress,
+    userAgent,
+  }) => {
+    const result =
+      await pool.query(
+        `INSERT INTO verification_logs (
+           credential_id,
+           verifier_name,
+           verifier_email,
+           result,
+           result_code,
+           verification_method,
+           uploaded_hash,
+           ip_address,
+           user_agent
+         )
+         VALUES (
+           $1,
+           $2,
+           $3,
+           $4,
+           $5,
+           $6,
+           $7,
+           $8,
+           $9
+         )
+         RETURNING
+           id,
+           credential_id,
+           result_code,
+           verification_method,
+           verification_time`,
+        [
+          credentialId ||
+            null,
+
+          verifierName ||
+            null,
+
+          verifierEmail ||
+            null,
+
+          resultCode ===
+            "VERIFIED",
+
+          resultCode,
+
+          verificationMethod,
+
+          uploadedHash ||
+            null,
+
+          ipAddress ||
+            null,
+
+          userAgent ||
+            null,
+        ]
+      );
+
+    return result.rows[0];
+  };
+
+const listVerificationLogs =
+  async ({
+    scopeInstitutionId = null,
+    institutionId = null,
+    resultCode = null,
+    method = null,
+    credentialId = null,
+    dateFrom = null,
+    dateTo = null,
+    limit = 20,
+    offset = 0,
+    sortBy =
+      "verification_time",
+    sortOrder = "DESC",
+  } = {}) => {
+    const fields = {
+      verification_time:
+        "verification_logs.verification_time",
+
+      result:
+        "verification_logs.result",
+
+      verification_method:
+        "verification_logs.verification_method",
+    };
+
+    const column =
+      fields[sortBy] ||
+      fields.verification_time;
+
+    const order =
+      sortOrder === "ASC"
+        ? "ASC"
+        : "DESC";
+
+    const values = [];
+    const where = [];
+
+    const add = (
+      sql,
+      value
+    ) => {
+      values.push(value);
+
+      where.push(
+        sql.replace(
+          "?",
+          `$${values.length}`
+        )
+      );
+    };
+
+    if (
+      scopeInstitutionId
+    ) {
+      add(
+
+===== ISSUE CREDENTIAL FULL FLOW =====
+const issueCredential =
+  async (req, res) => {
+    let credential;
+
+    try {
+      const {
+        studentId,
+        institutionId,
+        qualification,
+        issueDate,
+        awardDate,
+      } = req.body || {};
+
+      if (!req.file) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message:
+              "A certificate PDF is required.",
+          });
+      }
+
+      if (
+        !studentId ||
+        !institutionId ||
+        !qualification ||
+        !issueDate
+      ) {
+        await removeTemporaryFile(
+          req.file.path
+        );
+
+        return res
+          .status(400)
+          .json({
+            success: false,
+
+            message:
+              "Student ID, institution ID, qualification and issue date are required.",
+          });
+      }
+
+      const student =
+        await getStudentById(
+          studentId
+        );
+
+      if (!student) {
+        await removeTemporaryFile(
+          req.file.path
+        );
+
+        return res
+          .status(404)
+          .json({
+            success: false,
+            message:
+              "Student not found.",
+          });
+      }
+
+      if (
+        student.institution_id !==
+        institutionId
+      ) {
+        await removeTemporaryFile(
+          req.file.path
+        );
+
+        return res
+          .status(400)
+          .json({
+            success: false,
+
+            message:
+              "The selected student does not belong to the selected institution.",
+          });
+      }
+
+      if (
+        req.user.role !==
+          "super_admin" &&
+        req.user.institutionId !==
+          institutionId
+      ) {
+        await removeTemporaryFile(
+          req.file.path
+        );
+
+        return res
+          .status(403)
+          .json({
+            success: false,
+
+            message:
+              "You cannot issue credentials for another institution.",
+          });
+      }
+
+      const institution =
+        await getInstitutionById(
+          institutionId
+        );
+
+      if (!institution) {
+        await removeTemporaryFile(
+          req.file.path
+        );
+
+        return res
+          .status(404)
+          .json({
+            success: false,
+            message:
+              "Institution not found.",
+          });
+      }
+
+      if (!institution.status) {
+        await removeTemporaryFile(
+          req.file.path
+        );
+
+        return res
+          .status(422)
+          .json({
+            success: false,
+
+            message:
+              "Credentials cannot be issued by an inactive institution.",
+          });
+      }
+
+      if (
+        !(await hasPdfSignature(
+          req.file.path
+        ))
+      ) {
+        await removeTemporaryFile(
+          req.file.path
+        );
+
+        return res
+          .status(422)
+          .json({
+            success: false,
+
+            message:
+              "The uploaded file does not contain a valid PDF signature.",
+          });
+      }
+
+      const certificateHash =
+        await generateFileHash(
+          req.file.path
+        );
+
+      const duplicateCredential =
+        await findCredentialByHash(
+          certificateHash
+        );
+
+      if (duplicateCredential) {
+        await removeTemporaryFile(
+          req.file.path
+        );
+
+        return res
+          .status(409)
+          .json({
+            success: false,
+
+            message:
+              "This exact certificate has already been registered.",
+          });
+      }
+
+      const effectiveAwardDate =
+        req.effectiveAwardDate ||
+        awardDate ||
+        issueDate;
+
+      const processingInput = {
+        studentId,
+        institutionId,
+        qualification,
+        issueDate,
+        certificateHash,
+        createdBy:
+          req.user.userId,
+      };
+
+      if (
+        req.effectiveAwardDate ||
+        awardDate
+      ) {
+        processingInput.awardDate =
+          effectiveAwardDate;
+      }
+
+      credential =
+        await createProcessingCredential(
+          processingInput
+        );
+
+      await createAuditLog({
+        ...requestAuditContext(
+          req
+        ),
+
+        institutionId,
+
+        action:
+          "CREDENTIAL_PROCESSING_STARTED",
+
+        entityType:
+          "credential",
+
+        entityId:
+          credential.id,
+
+        details: {
+          status:
+            "processing",
+
+          awardDate:
+            effectiveAwardDate,
+        },
+      });
+
+      await createAuditLog({
+        ...requestAuditContext(
+          req
+        ),
+
+        institutionId,
+
+        action:
+          "CERTIFICATE_HASH_GENERATED",
+
+        entityType:
+          "credential",
+
+        entityId:
+          credential.id,
+
+        details: {
+          algorithm:
+            "SHA-256",
+
+          certificateHash,
+        },
+      });
+
+      let anchorHash =
+        certificateHash;
+
+      let structuredProof =
+        null;
+
+      if (
+        req.accreditationRecord
+      ) {
+        const payload =
+          buildStructuredCredentialPayload({
+            credentialId:
+              credential.id,
+
+            institutionId,
+
+            studentId,
+
+            studentNumber:
+              student.student_number,
+
+            qualification,
+
+            programme:
+              student.programme,
+
+            awardDate:
+              effectiveAwardDate,
+
+            issueDate,
+
+            statusListIndex:
+              credential
+                .status_list_index,
+          });
+
+        structuredProof =
+          await signStructuredCredential({
+            payload,
+
+            expectedInstitutionWallet:
+              institution
+                .wallet_address,
+          });
+
+        const storedProof =
+          await setCredentialStructuredProof(
+            credential.id,
+            {
+              payload,
+
+              commitment:
+                structuredProof
+                  .commitmentHash,
+
+              signature:
+                structuredProof
+                  .proof
+                  .signature,
+
+              issuerWallet:
+                structuredProof
+                  .proof
+                  .issuerWallet,
+
+              proofType:
+                structuredProof
+                  .proof
+                  .type,
+
+              canonicalisation:
+                structuredProof
+                  .proof
+                  .canonicalisation,
+
+              hashAlgorithm:
+                structuredProof
+                  .proof
+                  .hashAlgorithm,
+            }
+          );
+
+        if (!storedProof) {
+          const proofError =
+            new Error(
+              "Structured credential proof could not be persisted."
+            );
+
+          proofError.code =
+            "CREDENTIAL_PROOF_PERSISTENCE_FAILED";
+
+          throw proofError;
+        }
+
+        credential = {
+          ...credential,
+          ...storedProof,
+        };
+
+        anchorHash =
+          structuredProof
+            .commitmentHash;
+
+        await createAuditLog({
+          ...requestAuditContext(
+            req
+          ),
+
+          institutionId,
+
+          action:
+            "CREDENTIAL_STRUCTURED_PROOF_CREATED",
+
+          entityType:
+            "credential",
+
+          entityId:
+            credential.id,
+
+          details: {
+            proofVersion:
+              "structured-v2",
+
+            canonicalisation:
+              "RFC8785",
+
+            hashAlgorithm:
+              "SHA-256",
+
+            credentialCommitment:
+              anchorHash,
+
+            issuerWallet:
+              structuredProof
+                .proof
+                .issuerWallet,
+
+            statusListIndex:
+              credential
+                .status_list_index,
+          },
+        });
+      }
+
+      if (
+        req.accreditationRecord
+      ) {
+        await createAuditLog({
+          ...requestAuditContext(
+            req
+          ),
+
+          institutionId,
+
+          action:
+            "CREDENTIAL_ACCREDITATION_VALIDATED",
+
+          entityType:
+            "credential",
+
+          entityId:
+            credential.id,
+
+          details: {
+            accreditationId:
+              req
+                .accreditationRecord
+                .id,
+
+            programme:
+              student.programme,
+
+            awardDate:
+              effectiveAwardDate,
+
+            sourceLabel:
+              req
+                .accreditationRecord
+                .source_label ||
+              "SIMULATED_REGULATOR",
+          },
+        });
+      }
+
+      const ipfsMetadata = {
+        credentialId:
+          credential.id,
+
+        institutionId,
+
+        studentNumber:
+          student.student_number,
+
+        qualification,
+
+        issueDate,
+
+        certificateHash,
+      };
+
+      if (
+        req.effectiveAwardDate ||
+        awardDate
+      ) {
+        ipfsMetadata.awardDate =
+          effectiveAwardDate;
+
+        ipfsMetadata.programme =
+          student.programme;
+      }
+
+      if (structuredProof) {
+        ipfsMetadata.proofVersion =
+          "structured-v2";
+
+        ipfsMetadata.credentialCommitment =
+          structuredProof
+            .commitmentHash;
+
+        ipfsMetadata.statusListIndex =
+          credential
+            .status_list_index;
+      }
+
+      const ipfsResult =
+        await uploadFileToIPFS(
+          req.file.path,
+          ipfsMetadata
+        );
+
+      credential =
+        await updateCredentialIpfsData(
+          credential.id,
+          ipfsResult.cid
+        );
+
+      await createAuditLog({
+        ...requestAuditContext(
+          req
+        ),
+
+        action:
+          "ipfs_upload_success",
+
+        entityType:
+          "credential",
+
+        entityId:
+          credential.id,
+
+        details: {
+          provider:
+            ipfsResult.provider,
+
+          cid:
+            ipfsResult.cid,
+
+          certificateHash,
+
+          anchorHash,
+        },
+      });
+
+      const blockchainResult =
+        await issueCredentialOnChain(
+          anchorHash,
+          {
+            expectedInstitutionWallet:
+              institution
+                .wallet_address,
+
+            onSubmitted: ({
+              transactionHash,
+            }) =>
+              createAuditLog({
+                ...requestAuditContext(
+                  req
+                ),
+
+                action:
+                  "blockchain_transaction_submitted",
+
+                entityType:
+                  "credential",
+
+                entityId:
+                  credential.id,
+
+                details: {
+                  transactionHash,
+
+                  anchorHash,
+
+                  proofVersion:
+                    structuredProof
+                      ? "structured-v2"
+                      : "legacy-v1",
+                },
+              }),
+          }
+        );
+
+      await createAuditLog({
+        ...requestAuditContext(
+          req
+        ),
+
+        action:
+          "blockchain_transaction_confirmed",
+
+        entityType:
+          "credential",
+
+        entityId:
+          credential.id,
+
+        details: {
+          transactionHash:
+            blockchainResult
+              .transactionHash,
+
+          blockNumber:
+            blockchainResult
+              .blockNumber,
+
+          network:
+            blockchainResult
+              .network,
+
+          anchorHash,
+        },
+      });
+
+      const activeCredential =
+        await activateCredential(
+          credential.id,
+          blockchainResult
+        );
+
+      if (!activeCredential) {
+        const recoveryError =
+          new Error(
+            "Confirmed blockchain proof requires database reconciliation."
+          );
+
+        recoveryError.code =
+          "BLOCKCHAIN_RECONCILIATION_REQUIRED";
+
+        recoveryError.statusCode =
+          500;
+
+        recoveryError.transactionHash =
+          blockchainResult
+            .transactionHash;
+
+        throw recoveryError;
+      }
+
+      credential =
+        activeCredential;
+
+      if (structuredProof) {
+        try {
+          const publishedStatusList =
+            await publishStatusListForInstitution({
+              institutionId,
+
+              institutionWallet:
+                institution
+                  .wallet_address,
+            });
+
+          await createAuditLog({
+            ...requestAuditContext(
+              req
+            ),
+
+            institutionId,
+
+            action:
+              "STATUS_LIST_PUBLISHED_ON_ISSUANCE",
+
+            entityType:
+              "credential",
+
+            entityId:
+              credential.id,
+
+            details: {
+              version:
+                publishedStatusList
+                  .version,
+
+              statusListIndex:
+                credential
+                  .status_list_index,
+
+              nextUpdate:
+                publishedStatusList
+                  .next_update,
+
+              commitment:
+                publishedStatusList
+                  .commitment,
+
+              transactionHash:
+                publishedStatusList
+                  .blockchain_tx ||
+                null,
+            },
+          });
+        } catch (
+          statusListError
+        ) {
+          await createAuditLog({
+            ...requestAuditContext(
+              req
+            ),
+
+            institutionId,
+
+            action:
+              "STATUS_LIST_PUBLICATION_FAILED",
+
+            entityType:
+              "credential",
+
+            entityId:
+              credential.id,
+
+            details: {
+              phase:
+                "issuance",
+
+              errorCode:
+                statusListError
+                  .code ||
+                "STATUS_LIST_PUBLICATION_FAILED",
+            },
+          }).catch(
+            () => {}
+          );
+        }
+      }
+
+      let qrCode =
+        null;
+
+      try {
+        const generatedQr =
+          await generateCredentialQrCode(
+            credential
+              .public_token
+          );
+
+        const qrCredential =
+          await updateCredentialQrCodePath(
+            credential.id,
+            generatedQr
+              .storedPath
+          );
+
+        credential = {
+          ...credential,
+          ...qrCredential,
+        };
+
+        qrCode = {
+          path:
+            generatedQr
+              .storedPath,
+
+          verificationUrl:
+            generatedQr
+              .verificationUrl,
+        };
+
+        await createAuditLog({
+          ...requestAuditContext(
+            req
+          ),
+
+          institutionId,
+
+          action:
+            "QR_GENERATED",
+
+          entityType:
+            "credential",
+
+          entityId:
+            credential.id,
+
+          details: {
+            path:
+              generatedQr
+                .storedPath,
+          },
+        });
+      } catch (qrError) {
+        await createAuditLog({
+          ...requestAuditContext(
+            req
+          ),
+
+          action:
+            "credential_qr_generation_failed",
+
+          entityType:
+            "credential",
+
+          entityId:
+            credential.id,
+
+          details: {
+            errorCode:
+              qrError.code ||
+              "QR_GENERATION_FAILED",
+          },
+        }).catch(
+          () => {}
+        );
+      }
+
+      await createAuditLog({
+        ...requestAuditContext(
+          req
+        ),
+
+        action:
+          "credential_activated",
+
+        entityType:
+          "credential",
+
+        entityId:
+          credential.id,
+
+        details: {
+          transactionHash:
+            blockchainResult
+              .transactionHash,
+
+          proofVersion:
+            structuredProof
+              ? "structured-v2"
+              : "legacy-v1",
+
+          anchorHash,
+        },
+      });
+
+      await removeTemporaryFile(
+        req.file.path
+      );
+
+      return res
+        .status(201)
+        .json({
+          success: true,
+
+          message:
+            "Credential issued successfully with confirmed blockchain proof.",
+
+          credential,
+
+          accreditation:
+            req.accreditationRecord
+              ? {
+                  id:
+                    req
+                      .accreditationRecord
+                      .id,
+
+                  programme:
+                    req
+                      .accreditationRecord
+                      .programme,
+
+                  validFrom:
+                    req
+                      .accreditationRecord
+                      .valid_from,
+
+                  validTo:
+                    req
+                      .accreditationRecord
+                      .valid_to,
+
+                  sourceLabel:
+                    req
+                      .accreditationRecord
+                      .source_label,
+
+                  awardDate:
+                    effectiveAwardDate,
+                }
+              : null,
+
+          proof:
+            structuredProof
+              ? {
+                  version:
+                    "structured-v2",
+
+                  credentialCommitment:
+                    structuredProof
+                      .commitmentHash,
+
+                  issuerWallet:
+                    structuredProof
+                      .proof
+                      .issuerWallet,
+
+                  canonicalisation:
+                    structuredProof
+                      .proof
+                      .canonicalisation,
+
+                  hashAlgorithm:
+                    structuredProof
+                      .proof
+                      .hashAlgorithm,
+
+                  type:
+                    structuredProof
+                      .proof
+                      .type,
+                }
+              : {
+                  version:
+                    "legacy-v1",
+                },
+
+          ipfs:
+            ipfsResult,
+
+          blockchain:
+            blockchainResult,
+
+          qrCode,
+
+          file: {
+            originalName:
+              req.file
+                .originalname,
+
+            size:
+              req.file.size,
+
+            hashAlgorithm:
+              "SHA-256",
+
+            certificateHash,
+
+            blockchainAnchorHash:
+              anchorHash,
+          },
+        });
+    } catch (error) {
+      console.error(
+        "Credential issuance error:",
+        error.code ||
+          error.name
+      );
+
+      await removeTemporaryFile(
+        req.file?.path
+      );
+
+      if (
+        credential?.id
+      ) {
+        const processingError =
+          safeProcessingError(
+            error
+          );
+
+        await markCredentialFailed(
+          credential.id,
+          processingError
+        ).catch(
+          (
+            databaseError
+          ) => {
+            require(
+              "../utils/logger"
+            ).log(
+              "error",
+              "credential_status_update_failed",
+              {
+                errorCode:
+                  databaseError.code ||
+                  "DATABASE_ERROR",
+              }
+            );
+          }
+        );
+
+        const auditContext =
+          requestAuditContext(
+            req
+          );
+
+        await Promise.allSettled([
+          createAuditLog({
+            ...auditContext,
+
+            action:
+              processingError.startsWith("IPFS_") ? "ipfs_upload_failure" : "credential_processing_failure",
+
+            entityType:
+              "credential",
+
+            entityId:
+              credential.id,
+
+            details: {
+              errorCode:
+                processingError,
+            },
+          }),
+
+          createAuditLog({
+            ...auditContext,
+
+            action:
+              "CREDENTIAL_FAILED",
+
+            entityType:
+              "credential",
+
+            entityId:
+              credential.id,
+
+            details: {
+              errorCode:
+                processingError,
+            },
+          }),
+
+          ...(error.code?.startsWith(
+            "BLOCKCHAIN"
+          )
+            ? [
+                createAuditLog({
+                  ...auditContext,
+
+                  action:
+                    error.code ===
+                    "BLOCKCHAIN_RECONCILIATION_REQUIRED"
+                      ? "blockchain_reconciliation_required"
+                      : "blockchain_transaction_failed",
+
+                  entityType:
+                    "credential",
+
+                  entityId:
+                    credential.id,
+
+                  details: {
+                    errorCode:
+                      processingError,
+
+                    transactionHash:
+                      error
+                        .transactionHash ||
+                      null,
+                  },
+                }),
+              ]
+            : []),
+        ]);
+      }
+
+      if (
+        error.code ===
+        "23505"
+      ) {
+        return res
+          .status(409)
+          .json({
+            success: false,
+
+            message:
+              "This exact certificate has already been registered.",
+          });
+      }
+
+      if (
+        error.code ===
+        "23503"
+      ) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+
+            message:
+              "The student, institution or issuing user is invalid.",
+          });
+      }
+
+      const isBlockchainError =
+        error.code?.startsWith(
+          "BLOCKCHAIN"
+        );
+
+      return res
+        .status(
+          error.statusCode ||
+            500
+        )
+        .json({
+          success: false,
+
+          message:
+            isBlockchainError &&
+            error.statusCode ===
+              403
+              ? "The configured institution wallet is not authorised for blockchain issuance."
+              : isBlockchainError &&
+                error.statusCode ===
+                  409
+              ? "This credential proof already exists on the blockchain."
+              : isBlockchainError &&
+                error.statusCode ===
+                  504
+              ? "Blockchain confirmation timed out; reconciliation is required."
+              : isBlockchainError &&
+                error.statusCode ===
+                  503
+              ? "The blockchain network is temporarily unavailable."
+              : error.statusCode ===
+                502
+              ? "The certificate storage provider rejected the upload."
+              : error.statusCode ===
+                503
+              ? "Certificate storage is temporarily unavailable."
+              : "Failed to issue credential.",
+        });
+    }
+  };
+
+
+===== STUDENT MODEL FIELDS =====
+
+  backend\models\studentModel.js:5:  fullName,
+  backend\models\studentModel.js:6:  email,
+> backend\models\studentModel.js:7:  programme,
+  backend\models\studentModel.js:8:  institutionId,
+  backend\models\studentModel.js:9:}) => {
+  backend\models\studentModel.js:10:  const query = `
+  backend\models\studentModel.js:11:    INSERT INTO students (
+> backend\models\studentModel.js:12:      student_number,
+> backend\models\studentModel.js:13:      full_name,
+  backend\models\studentModel.js:14:      email,
+> backend\models\studentModel.js:15:      programme,
+  backend\models\studentModel.js:16:      institution_id
+  backend\models\studentModel.js:17:    )
+  backend\models\studentModel.js:18:    VALUES ($1, $2, $3, $4, $5)
+  backend\models\studentModel.js:19:    RETURNING
+  backend\models\studentModel.js:20:      id,
+> backend\models\studentModel.js:21:      student_number,
+> backend\models\studentModel.js:22:      full_name,
+  backend\models\studentModel.js:23:      email,
+> backend\models\studentModel.js:24:      programme,
+  backend\models\studentModel.js:25:      institution_id,
+  backend\models\studentModel.js:26:      created_at
+  backend\models\studentModel.js:27:  `;
+  backend\models\studentModel.js:31:    fullName,
+  backend\models\studentModel.js:32:    email || null,
+> backend\models\studentModel.js:33:    programme,
+  backend\models\studentModel.js:34:    institutionId,
+  backend\models\studentModel.js:35:  ];
+  backend\models\studentModel.js:36:
+  backend\models\studentModel.js:40:};
+  backend\models\studentModel.js:41:
+> backend\models\studentModel.js:42:const listStudents = async ({ institutionId = null, search = null, programme = null, limit = 20, offset = 0, sortBy = "created_at", sortOrder = "DESC" } = {}) => {
+> backend\models\studentModel.js:43:  const fields = { student_number: "students.student_number", full_name: "students.full_name", programme: "students.programme", created_at: "students.created_at" };
+  backend\models\studentModel.js:44:  const column = fields[sortBy] || fields.created_at; const order = sortOrder === "ASC" ? "ASC" : "DESC";
+  backend\models\studentModel.js:45:  const values = []; const where = [];
+  backend\models\studentModel.js:46:  if (institutionId) { values.push(institutionId); where.push(`students.institution_id = $${values.length}`); }
+> backend\models\studentModel.js:47:  if (search) { values.push(search); where.push(`(students.student_number ILIKE $${values.length} ESCAPE '\\' OR students.full_name ILIKE $${values.length} ESCAPE '\\' OR 
+students.email ILIKE $${values.length} ESCAPE '\\' OR students.programme ILIKE $${values.length} ESCAPE '\\')`); }
+> backend\models\studentModel.js:48:  if (programme) { values.push(programme); where.push(`students.programme ILIKE $${values.length} ESCAPE '\\'`); }
+  backend\models\studentModel.js:49:  const clause = where.length ? `WHERE ${where.join(" AND ")}` : "";
+> backend\models\studentModel.js:50:  const count = await pool.query(`SELECT COUNT(*)::int AS total FROM students ${clause}`, values);
+  backend\models\studentModel.js:51:  const resultValues = [...values, limit, offset];
+> backend\models\studentModel.js:52:  const result = await pool.query(`SELECT students.id, students.student_number, students.full_name, students.email, students.programme, students.institution_id, institutions.name AS 
+institution_name, students.created_at FROM students INNER JOIN institutions ON students.institution_id = institutions.id ${clause} ORDER BY ${column} ${order}, students.id ASC LIMIT $${resultValues.length - 1} OFFSET 
+$${resultValues.length}`, resultValues);
+  backend\models\studentModel.js:53:  return { rows: result.rows, total: count.rows[0].total };
+  backend\models\studentModel.js:54:};
+  backend\models\studentModel.js:55:const getAllStudents = (options = {}) => listStudents(options);
+  backend\models\studentModel.js:58:const getStudentById = async (id) => {
+  backend\models\studentModel.js:59:  const query = `
+> backend\models\studentModel.js:60:    SELECT
+  backend\models\studentModel.js:61:      students.id,
+> backend\models\studentModel.js:62:      students.student_number,
+> backend\models\studentModel.js:63:      students.full_name,
+  backend\models\studentModel.js:64:      students.email,
+> backend\models\studentModel.js:65:      students.programme,
+  backend\models\studentModel.js:66:      students.institution_id,
+  backend\models\studentModel.js:67:      students.user_id,
+  backend\models\studentModel.js:68:      institutions.name AS institution_name,
+  backend\models\studentModel.js:81:
+  backend\models\studentModel.js:82:const getStudentByUserId = async (userId) => {
+> backend\models\studentModel.js:83:  const result = await pool.query(`SELECT id, student_number, full_name, email, programme, institution_id, user_id
+  backend\models\studentModel.js:84:    FROM students WHERE user_id = $1 LIMIT 1`, [userId]);
+  backend\models\studentModel.js:85:  return result.rows[0];
+  backend\models\studentModel.js:86:};
+  backend\models\studentModel.js:91:    SET user_id = $2
+  backend\models\studentModel.js:92:    WHERE id = $1 AND user_id IS NULL
+> backend\models\studentModel.js:93:    RETURNING id, student_number, full_name, email, programme, institution_id, user_id, created_at
+  backend\models\studentModel.js:94:  `, [studentId, userId]);
+  backend\models\studentModel.js:95:  return result.rows[0];
+  backend\models\studentModel.js:96:};
+  backend\models\studentModel.js:97:
+> backend\models\studentModel.js:98:const updateStudent = async (id, { studentNumber, fullName, email, programme }) => {
+> backend\models\studentModel.js:99:  const result = await pool.query(`UPDATE students SET student_number=$2, full_name=$3, email=$4, programme=$5 WHERE id=$1 RETURNING 
+id,student_number,full_name,email,programme,institution_id,created_at`, [id, studentNumber, fullName, email || null, programme]);
+  backend\models\studentModel.js:100:  return result.rows[0];
+  backend\models\studentModel.js:101:};
+> backend\models\studentModel.js:102:const studentHasCredentials = async (id) => Number((await pool.query(`SELECT COUNT(*)::int AS count FROM credentials WHERE student_id=$1`, [id])).rows[0].count) > 0;
+  backend\models\studentModel.js:103:const reassignStudentInstitution = async (id, institutionId) => {
+> backend\models\studentModel.js:104:  const result = await pool.query(`UPDATE students SET institution_id=$2 WHERE id=$1 RETURNING id,student_number,full_name,email,programme,institution_id,created_at`, [id, 
+institutionId]);
+  backend\models\studentModel.js:105:  return result.rows[0];
+  backend\models\studentModel.js:106:};
+  backend\models\studentModel.js:107:
+
+
+
+
+===== INSTITUTION MODEL FIELDS =====
+
+  backend\models\institutionModel.js:2:
+  backend\models\institutionModel.js:3:const createInstitution = async ({
+> backend\models\institutionModel.js:4:  name,
+  backend\models\institutionModel.js:5:  walletAddress,
+  backend\models\institutionModel.js:6:  email,
+  backend\models\institutionModel.js:7:  phone,
+  backend\models\institutionModel.js:9:  const query = `
+  backend\models\institutionModel.js:10:    INSERT INTO institutions (
+> backend\models\institutionModel.js:11:      name,
+  backend\models\institutionModel.js:12:      wallet_address,
+  backend\models\institutionModel.js:13:      email,
+  backend\models\institutionModel.js:14:      phone
+  backend\models\institutionModel.js:17:    RETURNING
+  backend\models\institutionModel.js:18:      id,
+> backend\models\institutionModel.js:19:      name,
+  backend\models\institutionModel.js:20:      wallet_address,
+  backend\models\institutionModel.js:21:      email,
+  backend\models\institutionModel.js:22:      phone,
+  backend\models\institutionModel.js:26:
+  backend\models\institutionModel.js:27:  const values = [
+> backend\models\institutionModel.js:28:    name,
+  backend\models\institutionModel.js:29:    walletAddress,
+  backend\models\institutionModel.js:30:    email,
+  backend\models\institutionModel.js:31:    phone || null,
+  backend\models\institutionModel.js:38:
+  backend\models\institutionModel.js:39:const getAllInstitutions = async ({ search = null, status = null, limit = 20, offset = 0, sortBy = "created_at", sortOrder = "DESC" } = {}) => {
+> backend\models\institutionModel.js:40:  const sortFields = { name: "name", email: "email", status: "status", created_at: "created_at" };
+  backend\models\institutionModel.js:41:  const column = sortFields[sortBy] || "created_at";
+  backend\models\institutionModel.js:42:  const order = sortOrder === "ASC" ? "ASC" : "DESC";
+  backend\models\institutionModel.js:43:  const values = []; const where = [];
+> backend\models\institutionModel.js:44:  if (search) { values.push(search); where.push(`(name ILIKE $${values.length} ESCAPE '\\' OR email ILIKE $${values.length} ESCAPE '\\' OR wallet_address ILIKE $${values.length} 
+ESCAPE '\\' OR phone ILIKE $${values.length} ESCAPE '\\')`); }
+  backend\models\institutionModel.js:45:  if (status !== null) { values.push(status); where.push(`status = $${values.length}`); }
+  backend\models\institutionModel.js:46:  const clause = where.length ? `WHERE ${where.join(" AND ")}` : "";
+> backend\models\institutionModel.js:47:  const count = await pool.query(`SELECT COUNT(*)::int AS total FROM institutions ${clause}`, values);
+  backend\models\institutionModel.js:48:  const resultValues = [...values, limit, offset];
+> backend\models\institutionModel.js:49:  const result = await pool.query(`SELECT id, name, wallet_address, email, phone, status, created_at FROM institutions ${clause} ORDER BY ${column} ${order}, id ASC LIMIT 
+$${resultValues.length - 1} OFFSET $${resultValues.length}`, resultValues);
+  backend\models\institutionModel.js:50:  return { rows: result.rows, total: count.rows[0].total };
+  backend\models\institutionModel.js:51:};
+  backend\models\institutionModel.js:52:
+  backend\models\institutionModel.js:53:const getInstitutionById = async (id) => {
+  backend\models\institutionModel.js:54:  const query = `
+> backend\models\institutionModel.js:55:    SELECT
+  backend\models\institutionModel.js:56:      id,
+> backend\models\institutionModel.js:57:      name,
+  backend\models\institutionModel.js:58:      wallet_address,
+  backend\models\institutionModel.js:59:      email,
+  backend\models\institutionModel.js:60:      phone,
+  backend\models\institutionModel.js:78:    RETURNING
+  backend\models\institutionModel.js:79:      id,
+> backend\models\institutionModel.js:80:      name,
+  backend\models\institutionModel.js:81:      wallet_address,
+  backend\models\institutionModel.js:82:      email,
+  backend\models\institutionModel.js:83:      phone,
+
+
+
+
+===== STRUCTURED CREDENTIAL PAYLOAD =====
+const {
+  JsonRpcProvider,
+} = require("ethers");
+
+const {
+  getBlockchainConfig,
+  validateResolvedContract,
+} = require("../config/blockchain");
+
+const {
+  resolveInstitutionSigner,
+} = require("../config/blockchainSigner");
+
+const {
+  signCredentialPayload,
+} = require("./credentialProofService");
+
+const buildStructuredCredentialPayload = ({
+  credentialId,
+  institutionId,
+  studentId,
+  studentNumber,
+  qualification,
+  programme,
+  awardDate,
+  issueDate,
+  statusListIndex,
+}) => {
+  return {
+    "@context": [
+      "https://www.w3.org/ns/credentials/v2",
+    ],
+
+    id:
+      `urn:uuid:${credentialId}`,
+
+    type: [
+      "VerifiableCredential",
+      "EducationalCredential",
+    ],
+
+    issuer:
+      `urn:verifyzw:institution:${institutionId}`,
+
+    credentialSubject: {
+      id:
+        `urn:verifyzw:student:${studentId}`,
+
+      registrationNumber:
+        studentNumber,
+
+      qualification,
+
+      programme,
+
+      awardDate,
+    },
+
+    validFrom:
+      issueDate,
+
+    credentialStatus: {
+      id:
+        `urn:verifyzw:status:${institutionId}#${statusListIndex}`,
+
+      type:
+        "BitstringStatusListEntry",
+
+      statusPurpose:
+        "revocation",
+
+      statusListIndex:
+        String(
+          statusListIndex
+        ),
+
+      statusListCredential:
+        `urn:verifyzw:status:${institutionId}`,
+    },
+  };
+};
+
+const signStructuredCredential =
+  async ({
+    payload,
+    expectedInstitutionWallet,
+  }) => {
+    const config =
+      getBlockchainConfig({
+        requireSigner:
+          false,
+      });
+
+    const provider =
+      new JsonRpcProvider(
+        config.rpcUrl
+      );
+
+    await validateResolvedContract(
+      config,
+      provider
+    );
+
+    const signer =
+      await resolveInstitutionSigner(
+        expectedInstitutionWallet,
+        config,
+        provider
+      );
+
+    return signCredentialPayload({
+      payload,
+      signer,
+      expectedIssuerWallet:
+        expectedInstitutionWallet,
+    });
+  };
+
+module.exports = {
+  buildStructuredCredentialPayload,
+  signStructuredCredential,
+  validateStructuredCredentialBinding,
+};
+
+// Validate the prototype schema and bind every security-relevant signed field
+// to the row used for accreditation, ownership and lifecycle decisions.
+function validateStructuredCredentialBinding(row) {
+  const p = row?.credential_payload;
+  const s = p?.credentialSubject;
+  const status = p?.credentialStatus;
+  const day = (value) => {
+    if (!value) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString().slice(0, 10);
+  };
+  const index = String(row?.status_list_index ?? "");
+  return Boolean(p && s && status &&
+    p['@context']?.includes('https://www.w3.org/ns/credentials/v2') &&
+    Array.isArray(p.type) && p.type.includes('VerifiableCredential') && p.type.includes('EducationalCredential') &&
+    row.id && row.institution_id && row.student_id && row.programme && row.qualification && row.student_number &&
+    p.id === `urn:uuid:${row.id}` &&
+    p.issuer === `urn:verifyzw:institution:${row.institution_id}` &&
+    s.id === `urn:verifyzw:student:${row.student_id}` &&
+    s.registrationNumber === row.student_number && s.programme === row.programme && s.qualification === row.qualification &&
+    day(s.awardDate) && day(s.awardDate) === day(row.award_date || row.issue_date) &&
+    day(p.validFrom) && day(p.validFrom) === day(row.issue_date) &&
+    /^\d+$/.test(index) && Number.isSafeInteger(Number(index)) &&
+    status.type === 'BitstringStatusListEntry' && status.statusPurpose === 'revocation' &&
+    status.statusListIndex === index &&
+    status.id === `urn:verifyzw:status:${row.institution_id}#${index}` &&
+    status.statusListCredential === `urn:verifyzw:status:${row.institution_id}`);
+}
+
+===== CURRENT SEMANTIC ANCHOR EXPORTS =====
+          submittedValue ===
+          null
+        ) {
+          return field;
+        }
+
+        field.status =
+          matchesCandidate(
+            submittedValue,
+            candidates
+          )
+            ? "UNCHANGED"
+            : "ALTERED";
+
+        return field;
+      }
+    );
+
+  const alteredFields =
+    fields.filter(
+      field =>
+        field.status ===
+        "ALTERED"
+    );
+
+  return {
+    analysisAvailable:
+      true,
+
+    fields,
+
+    alteredFields,
+
+    semanticTamperingDetected:
+      alteredFields.length >
+      0,
+  };
+}
+
+async function analyseAnchoredSemanticChanges({
+  credential,
+  filePath,
+}) {
+  try {
+    const official =
+      await fetchOfficialPdf(
+        credential
+      );
+
+    if (
+      !official?.available ||
+      !official?.bytes
+    ) {
+      return {
+        analysisAvailable:
+          false,
+
+        reason:
+          official?.reason ||
+          "AUTHORITATIVE_PDF_UNAVAILABLE",
+
+        fields: [],
+        alteredFields: [],
+      };
+    }
+
+    const submittedBytes =
+      new Uint8Array(
+        await fs.readFile(
+          filePath
+        )
+      );
+
+    return await analyseAnchoredSemanticChangesFromBytes({
+      credential,
+
+      officialBytes:
+        official.bytes,
+
+      submittedBytes,
+    });
+  } catch {
+    return {
+      analysisAvailable:
+        false,
+
+      reason:
+        "SEMANTIC_ANCHOR_ANALYSIS_UNAVAILABLE",
+
+      fields: [],
+      alteredFields: [],
+    };
+  }
+}
+
+module.exports = {
+  analyseAnchoredSemanticChanges,
+  analyseAnchoredSemanticChangesFromBytes,
+  extractLayout,
+};
+
+===== CURRENT TAMPER ANALYSIS ENTRY =====
+async function analyseTamperedPdf({
+  filePath,
+  credential,
+}) {
+  try {
+    const submittedText =
+      await extractPdfText(
+        filePath
+      );
+
+    const baseline =
+      await loadOfficialBaseline(
+        credential
+      );
+
+    const semantic =
+      analyseSemanticChanges({
+        credential,
+        submittedText,
+
+        baselineText:
+          baseline.available
+            ? baseline.text
+            : null,
+      });
+
+    const anchoredSemantic =
+      await analyseAnchoredSemanticChanges({
+        credential,
+        filePath,
+      });
+
+    const resolvedSemantic =
+      mergeSemanticResults(
+        semantic,
+        anchoredSemantic
+      );
+
+    const structuralAnalysis =
+      await analysePdfStructureAgainstOfficial({
+        filePath,
+        credential,
+      });
+
+    return {
+      analysisAvailable: true,
+
+      documentModified: true,
+
+      baselineAnalysis: {
+        available:
+          baseline.available,
+
+        reason:
+          baseline.reason,
+      },
+
+      semanticTamperingDetected:
+        resolvedSemantic.semanticTamperingDetected,
+
+      alteredFields:
+        resolvedSemantic.alteredFields,
+
+      fields:
+        resolvedSemantic.fields,
+
+      structuralAnalysis,
+    };
+  } catch {
+    return {
+      analysisAvailable: false,
+
+      documentModified: true,
+
+      semanticTamperingDetected:
+        null,
+
+      alteredFields: [],
+
+      fields: [],
+
+      structuralAnalysis: {
+        analysisAvailable:
+          false,
+
+        reason:
+          "STRUCTURAL_ANALYSIS_UNAVAILABLE",
+
+        structureModified:
+          null,
+
+        changes: [],
+
+        metadataChanges: [],
+      },
+
+      analysisError:
+        "Document modification was detected, but field-level localisation could not be completed.",
+    };
+  }
+}
+
+module.exports = {
+  analyseTamperedPdf,
+  analyseSemanticChanges,
+  extractPdfText,
+};

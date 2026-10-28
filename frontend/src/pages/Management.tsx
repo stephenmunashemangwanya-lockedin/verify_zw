@@ -3713,7 +3713,7 @@ export function CredentialDetail() {
                 rel="noopener noreferrer"
               >
                 IPFS evidence
-                              </a>
+                cd C:\Users\HYDRA\Desktop\Zimbabwe-Skill-Verification-Platform              </a>
             )}
 
             {Boolean(

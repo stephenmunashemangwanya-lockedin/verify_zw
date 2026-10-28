@@ -1,0 +1,90 @@
+warning: in the working copy of '.env.staging.example', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'backend/config/environment.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'test/stagingConfiguration.test.js', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/.env.staging.example b/.env.staging.example[m
+[1mindex d3e873f..22395df 100644[m
+[1m--- a/.env.staging.example[m
+[1m+++ b/.env.staging.example[m
+[36m@@ -66,6 +66,10 @@[m [mBLOCK_EXPLORER_URL=<approved staging block explorer URL>[m
+ [m
+ RATE_LIMIT_STORE=<approved rate-limit store>[m
+ REDIS_URL=<authenticated Render Key Value internal URL>[m
+[32m+[m[32m# TLS remains the default. For Render staging private networking, see docs/STAGING_REDIS.md.[m
+[32m+[m[32mREDIS_CONNECTION_POLICY=tls[m
+[32m+[m[32m# REDIS_PRIVATE_HOST=<exact internal Render hostname; required for render-private>[m
+[32m+[m[32m# RENDER=true is supplied by Render; do not simulate this marker outside Render.[m
+ REDIS_CONNECT_TIMEOUT_MS=5000[m
+ ENABLE_METRICS=true[m
+ METRICS_ROUTE=/metrics[m
+[1mdiff --git a/backend/config/environment.js b/backend/config/environment.js[m
+[1mindex b89a78f..326549b 100644[m
+[1m--- a/backend/config/environment.js[m
+[1m+++ b/backend/config/environment.js[m
+[36m@@ -1,4 +1,5 @@[m
+ const { isHexString } = require("ethers");[m
+[32m+[m[32mconst { validRedisConfiguration } = require("./redis");[m
+ [m
+ class EnvironmentConfigurationError extends Error {[m
+   constructor(issues) {[m
+[36m@@ -105,9 +106,7 @@[m [mconst validateEnvironment = ({ strict = process.env.NODE_ENV === "production" }[m
+     if ((process.env.DEPLOYER_PRIVATE_KEY || "").toLowerCase() === knownHardhatKey) issues.push("default Hardhat private keys are forbidden");[m
+     if (staging && (Number(process.env.BLOCKCHAIN_CHAIN_ID) === 1 || /mainnet/i.test(process.env.BLOCKCHAIN_NETWORK || ""))) issues.push("production blockchain is forbidden in staging");[m
+     if (process.env.IPFS_ENABLED !== "true") issues.push("IPFS_ENABLED must be true in staging/production");[m
+[31m-    let secureRedis = false;[m
+[31m-    try { secureRedis = new URL(process.env.REDIS_URL || "").protocol === "rediss:"; } catch {}[m
+[31m-    if (process.env.RATE_LIMIT_STORE !== "redis" || !secureRedis) issues.push("a secure Redis rate-limit store is required in staging/production");[m
+[32m+[m[32m    if (process.env.RATE_LIMIT_STORE !== "redis" || !validRedisConfiguration()) issues.push("a secure Redis rate-limit store is required in staging/production (TLS or explicitly configured staging Render private connection)");[m
+   }[m
+   if (issues.length) throw new EnvironmentConfigurationError(issues);[m
+   return Object.freeze({[m
+[1mdiff --git a/test/stagingConfiguration.test.js b/test/stagingConfiguration.test.js[m
+[1mindex f18eaeb..93054c8 100644[m
+[1m--- a/test/stagingConfiguration.test.js[m
+[1m+++ b/test/stagingConfiguration.test.js[m
+[36m@@ -11,10 +11,45 @@[m [mconst base = {[m
+   AUTH_COOKIE_SECURE: "true", CSRF_ENABLED: "true", EMAIL_PROVIDER: "webhook", EMAIL_DELIVERY_URL: "https://mail.example.test/send", EMAIL_DELIVERY_TOKEN: "secret", EMAIL_FROM: "staging@example.test",[m
+   IPFS_ENABLED: "true", IPFS_PROVIDER_API_URL: "https://api.pinata.cloud", PINATA_JWT: "secret", PINATA_GATEWAY: "https://ipfs.example.test/ipfs",[m
+   BLOCKCHAIN_ENABLED: "true", BLOCKCHAIN_NETWORK: "sepolia", BLOCKCHAIN_RPC_URL: "https://rpc.example.test", BLOCKCHAIN_CHAIN_ID: "11155111", CONTRACT_ADDRESS: "0x0000000000000000000000000000000000000001", DEPLOYER_PRIVATE_KEY: `0x${"11".repeat(32)}`,[m
+[31m-  RATE_LIMIT_STORE: "redis", REDIS_URL: "rediss://user:secret@redis.staging.internal:6380",[m
+[32m+[m[32m  RATE_LIMIT_STORE: "redis", REDIS_URL: "rediss://user:secret@redis.staging.internal:6380", REDIS_CONNECTION_POLICY: "tls", REDIS_PRIVATE_HOST: "", RENDER: "false",[m
+ };[m
+ const withEnvironment = (overrides, fn) => { const old = { ...process.env }; Object.assign(process.env, base, overrides); try { return fn(); } finally { for (const key of Object.keys(process.env)) if (!(key in old)) delete process.env[key]; Object.assign(process.env, old); } };[m
+ test("complete staging environment validates", () => withEnvironment({}, () => assert.equal(validateEnvironment().issuer, "zsvp-staging")));[m
+[32m+[m[32mconst renderPrivate = { REDIS_URL: "redis://default:synthetic%40password@red-staging123:6379/0", REDIS_CONNECTION_POLICY: "render-private", REDIS_PRIVATE_HOST: "red-staging123", RENDER: "true" };[m
+[32m+[m[32mfor (const [name, overrides] of [[m
+[32m+[m[32m  ["Render private", renderPrivate],[m
+[32m+[m[32m  ["TLS staging", {}],[m
+[32m+[m[32m  ["TLS production", { NODE_ENV: "production" }],[m
+[32m+[m[32m  ["TLS with private policy", { ...renderPrivate, REDIS_URL: base.REDIS_URL }],[m
+[32m+[m[32m  ["TLS default policy", { REDIS_CONNECTION_POLICY: undefined }],[m
+[32m+[m[32m]) test(`Redis accepts ${name}`, () => withEnvironment(overrides, () => {[m
+[32m+[m[32m  if (overrides.REDIS_CONNECTION_POLICY === undefined && "REDIS_CONNECTION_POLICY" in overrides) delete process.env.REDIS_CONNECTION_POLICY;[m
+[32m+[m[32m  assert.doesNotThrow(() => validateEnvironment());[m
+[32m+[m[32m}));[m
+[32m+[m[32mfor (const [name, overrides] of [[m
+[32m+[m[32m  ["missing opt-in", { REDIS_CONNECTION_POLICY: "tls" }],[m
+[32m+[m[32m  ["invalid policy", { REDIS_CONNECTION_POLICY: "private" }],[m
+[32m+[m[32m  ["empty policy", { REDIS_CONNECTION_POLICY: "" }],[m
+[32m+[m[32m  ["missing Render marker", { RENDER: "" }],[m
+[32m+[m[32m  ["wrong Render marker case", { RENDER: "TRUE" }],[m
+[32m+[m[32m  ["missing host pin", { REDIS_PRIVATE_HOST: "" }],[m
+[32m+[m[32m  ["host mismatch", { REDIS_PRIVATE_HOST: "red-other" }],[m
+[32m+[m[32m  ["external host", { REDIS_PRIVATE_HOST: "red-staging123.example.test", REDIS_URL: "redis://default:secret@red-staging123.example.test" }],[m
+[32m+[m[32m  ["invalid internal host", { REDIS_PRIVATE_HOST: "redis", REDIS_URL: "redis://default:secret@redis" }],[m
+[32m+[m[32m  ["uppercase host", { REDIS_PRIVATE_HOST: "red-STAGING", REDIS_URL: "redis://default:secret@red-STAGING" }],[m
+[32m+[m[32m  ["no auth", { REDIS_URL: "redis://red-staging123" }],[m
+[32m+[m[32m  ["no username", { REDIS_URL: "redis://:secret@red-staging123" }],[m
+[32m+[m[32m  ["no password", { REDIS_URL: "redis://default@red-staging123" }],[m
+[32m+[m[32m  ["production plaintext", { NODE_ENV: "production" }],[m
+[32m+[m[32m  ["production default plaintext", { NODE_ENV: "production", REDIS_CONNECTION_POLICY: "tls" }],[m
+[32m+[m[32m  ["invalid policy with TLS", { REDIS_CONNECTION_POLICY: "invalid", REDIS_URL: base.REDIS_URL }],[m
+[32m+[m[32m]) test(`Redis rejects ${name}`, () => withEnvironment({ ...renderPrivate, ...overrides }, () => assert.throws(() => validateEnvironment(), /Redis rate-limit store/)));[m
+[32m+[m[32mfor (const suffix of ["", "user:secret@", "user:secret@host:0", "user:secret@host:65536", "user:secret@host:abc", "user:secret@host:", "user:secret@host/nope", "user:secret@host/0/1", "user:secret@host/../0", "user:secret@host/%30", "user:secret@host?", "user:secret@host#", "user:secret@host?x=1", "user:secret@host#fragment", "user:bad%GG@host", "user:bad%@host", "user:bad%FF@host", "user:sec ret@host", "user:secret@ho\nst"]) {[m
+[32m+[m[32m  test(`Redis rejects malformed URL ${JSON.stringify(suffix)}`, () => withEnvironment({ REDIS_URL: `rediss://${suffix}` }, () => assert.throws(() => validateEnvironment(), /Redis rate-limit store/)));[m
+[32m+[m[32m}[m
+[32m+[m[32mtest("Redis rejects wrong scheme without exposing credentials", () => withEnvironment({ REDIS_URL: "https://sensitive-user:sensitive-password@host" }, () => {[m
+[32m+[m[32m  assert.throws(() => validateEnvironment(), error => /Redis rate-limit store/.test(error.message) && !/sensitive/.test(error.message));[m
+[32m+[m[32m}));[m
+ for (const [name, overrides, message] of [[m
+   ["localhost database", { DATABASE_URL: "postgresql://app:x@localhost/zsvp_staging" }, /localhost database/],[m
+   ["test database", { DATABASE_URL: "postgresql://app:x@db.internal/zsvp_test", DB_NAME: "zsvp_test" }, /database names/],[m
